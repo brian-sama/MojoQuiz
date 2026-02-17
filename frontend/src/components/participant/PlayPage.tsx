@@ -19,11 +19,9 @@ function PlayPage() {
     const navigate = useNavigate();
     const { isConnected, on, off, emit } = useSocket();
 
-    // State
     const [sessionId, setSessionId] = useState('');
     const [sessionTitle, setSessionTitle] = useState('');
     const [participantId, setParticipantId] = useState('');
-    const [participantToken, setParticipantToken] = useState('');
     const [participantCount, setParticipantCount] = useState(0);
     const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
     const [hasResponded, setHasResponded] = useState(false);
@@ -36,9 +34,8 @@ function PlayPage() {
     useEffect(() => {
         const storedSessionId = sessionStorage.getItem('sessionId');
         const storedParticipantId = sessionStorage.getItem('participantId');
-        const storedToken = sessionStorage.getItem('participantToken');
 
-        if (!storedSessionId || !storedParticipantId || !storedToken) {
+        if (!storedSessionId || !storedParticipantId) {
             // Not properly joined, redirect to join page
             navigate(`/join/${code}`);
             return;
@@ -46,7 +43,6 @@ function PlayPage() {
 
         setSessionId(storedSessionId);
         setParticipantId(storedParticipantId);
-        setParticipantToken(storedToken);
 
         // Fetch session details
         const loadSession = async () => {

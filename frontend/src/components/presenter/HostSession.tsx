@@ -123,94 +123,89 @@ function HostSession() {
             if (activeQuestion && activeQuestion.id === data.question_id) {
                 setResults(data.words.map((w: any) => ({ word: w.word, weight: w.count })));
             }
-            on('question_activated', (data: any) => {
-                setResponseCount(data.response_count || 0);
-                setResults(null);
-                setActiveQuestion(transformQuestion(data.question));
-            });
+        });
 
-            on('question_locked', (data: any) => {
-                if (activeQuestion && activeQuestion.id === data.question_id) {
-                    setActiveQuestion(prev => prev ? { ...prev, is_locked: data.is_locked } : null);
-                }
-            });
+        on('question_activated', (data: any) => {
+            setResponseCount(data.response_count || 0);
+            setResults(null);
+            setActiveQuestion(transformQuestion(data.question));
+        });
 
-            on('results_revealed', (data: any) => {
-                if (activeQuestion && activeQuestion.id === data.question_id) {
-                    setActiveQuestion(prev => prev ? { ...prev, is_results_visible: true } : null);
-                    setResults(data.results);
-                }
-            });
-
-            return () => {
-                off('presenter_joined');
-                off('participant_joined');
-                off('participant_left');
-                off('results_updated');
-                off('word_cloud_updated');
-                off('question_activated');
-                off('question_locked');
-                off('results_revealed');
-            };
-        }, [sessionId, isConnected, on, off, emit, activeQuestion]);
-
-        // Create a new question
-        const handleCreateQuestion = async () => {
-            if (!newQuestion.text.trim()) return;
-
-            try {
-                await api.createQuestion(sessionId!, {
-                    questionType: newQuestion.type,
-                    questionText: newQuestion.text,
-                    options: newQuestion.options.filter(o => o.trim()).map((text, i) => ({
-                        id: `opt_${i}`,
-                        text,
-                        is_correct: newQuestion.type === 'quiz_mc' && i === newQuestion.correctOption,
-                    })),
-                    settings: {
-                        time_limit: newQuestion.type.startsWith('quiz_') ? newQuestion.timeLimit : null,
-                    },
-                });
-
-                setShowBuilder(false);
-                setNewQuestion({ type: 'poll', text: '', options: ['', '', '', ''], timeLimit: 30, correctOption: 0 });
-                loadSession(); // Refresh questions
-            } catch (err) {
-                console.error('Failed to create question:', err);
+        on('question_locked', (data: any) => {
+            if (activeQuestion && activeQuestion.id === data.question_id) {
+                setActiveQuestion(prev => prev ? { ...prev, is_locked: data.is_locked } : null);
             }
+        });
+
+        on('results_revealed', (data: any) => {
+            if (activeQuestion && activeQuestion.id === data.question_id) {
+                setActiveQuestion(prev => prev ? { ...prev, is_results_visible: true } : null);
+                setResults(data.results);
+            }
+        });
+
+        return () => {
+            off('presenter_joined');
+            off('participant_joined');
+            off('participant_left');
+            off('results_updated');
+            off('word_cloud_updated');
+            off('question_activated');
+            off('question_locked');
+            off('results_revealed');
         };
+    }, [sessionId, isConnected, on, off, emit, activeQuestion]);
 
-        // Activate a question
-        const activateQuestion = useCallback((questionId: string) => {
-            emit('activate_question', { question_id: questionId });
-        }, [emit]);
+    // Create a new question
+    const handleCreateQuestion = async () => {
+        if (!newQuestion.text.trim()) return;
 
-        // Lock/unlock voting
-        const toggleLock = useCallback((locked: boolean) => {
-            if (!activeQuestion) return;
-            emit('lock_question', { question_id: activeQuestion.id, locked });
-        }, [activeQuestion, emit]);
-
-        // Show results
-        const revealResults = useCallback(() => {
-            if (!activeQuestion) return;
-            emit('show_results', { question_id: activeQuestion.id });
-        }, [activeQuestion, emit]);
-
-        // End session
-        const endSession = useCallback(() => {
-            if (window.confirm('Are you sure you want to end this session?')) {
-                emit('end_session');
-                navigate('/host');
-            }
-        }, [emit, navigate]);
         try {
-            await api.endSession(sessionId!);
-            navigate('/host');
+            await api.createQuestion(sessionId!, {
+                questionType: newQuestion.type,
+                questionText: newQuestion.text,
+                options: newQuestion.options.filter(o => o.trim()).map((text, i) => ({
+                    id: `opt_${i}`,
+                    text,
+                    is_correct: newQuestion.type === 'quiz_mc' && i === newQuestion.correctOption,
+                })),
+                settings: {
+                    time_limit: newQuestion.type.startsWith('quiz_') ? newQuestion.timeLimit : null,
+                },
+            });
+
+            setShowBuilder(false);
+            setNewQuestion({ type: 'poll', text: '', options: ['', '', '', ''], timeLimit: 30, correctOption: 0 });
+            loadSession(); // Refresh questions
         } catch (err) {
-            console.error('Failed to end session:', err);
+            console.error('Failed to create question:', err);
         }
-    }, [sessionId, navigate]);
+    };
+
+    // Activate a question
+    const activateQuestion = useCallback((questionId: string) => {
+        emit('activate_question', { question_id: questionId });
+    }, [emit]);
+
+    // Lock/unlock voting
+    const toggleLock = useCallback((locked: boolean) => {
+        if (!activeQuestion) return;
+        emit('lock_question', { question_id: activeQuestion.id, locked });
+    }, [activeQuestion, emit]);
+
+    // Show results
+    const revealResults = useCallback(() => {
+        if (!activeQuestion) return;
+        emit('show_results', { question_id: activeQuestion.id });
+    }, [activeQuestion, emit]);
+
+    // End session
+    const endSession = useCallback(() => {
+        if (window.confirm('Are you sure you want to end this session?')) {
+            emit('end_session');
+            navigate('/host');
+        }
+    }, [emit, navigate]);
 
     if (loading) {
         return (

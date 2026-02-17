@@ -45,7 +45,7 @@ export const api = {
         return this.request(`sessions/${code.toUpperCase()}`);
     },
 
-    async joinSession(code: string, nickname: string) {
+    async joinSession(code: string, _nickname: string) {
         return this.request(`join/${code.toUpperCase()}`);
     },
 
@@ -82,7 +82,7 @@ export const api = {
     },
 
     // Results
-    async submitResponse(data: any) {
+    async submitResponse(_data: any) {
         // New backend handles responses via Socket.IO
         console.warn('submitResponse: This operation is now handled by Socket.IO');
         return Promise.resolve({ success: true });
