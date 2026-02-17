@@ -16,22 +16,24 @@ Point your domain to your VPS:
 
 ---
 
-## 2. Initial Server Setup
+## 2. Initial Server Setup (Optional)
 
-Login as root and update:
+If you already have the `brian` user from the MMPZ setup, skip to **Step 3**.
 
-```bash
-ssh root@your_server_ip
-apt update && apt upgrade -y
-```
+1. **Update System**:
 
-Create a user:
+   ```bash
+   ssh root@89.116.26.24
+   apt update && apt upgrade -y
+   ```
 
-```bash
-adduser brian
-usermod -aG sudo brian
-su - brian
-```
+2. **Create User** (if needed):
+
+   ```bash
+   adduser brian
+   usermod -aG sudo brian
+   su - brian
+   ```
 
 ---
 
@@ -64,7 +66,7 @@ sudo npm install -g pm2
 
    ```sql
    CREATE DATABASE mojoquiz_db;
-   CREATE USER brian WITH ENCRYPTED PASSWORD 'Your_Secure_Password'; -- Remember to URL-encode special chars in .env
+   CREATE USER brian WITH ENCRYPTED PASSWORD 'Brian7350$@#'; -- Remember to URL-encode special chars in .env
    GRANT ALL PRIVILEGES ON DATABASE mojoquiz_db TO brian;
    ALTER DATABASE mojoquiz_db OWNER TO brian;
    \q
@@ -84,7 +86,7 @@ sudo npm install -g pm2
 1. **Clone Project**:
 
    ```bash
-   git clone https://github.com/brian-sama/MojoQuiz.git
+   git clone git@github.com:brian-sama/MojoQuiz.git
    cd MojoQuiz
    ```
 
@@ -107,7 +109,7 @@ sudo npm install -g pm2
    ```env
    PORT=3001
    NODE_ENV=production
-   DATABASE_URL=postgresql://brian:Your_Encoded_Password@localhost:5432/mojoquiz_db
+   DATABASE_URL=postgresql://brian:Brian7350%24%40%23@localhost:5432/mojoquiz_db
    CORS_ORIGIN=https://mojoquiz.co.zw
    ```
 

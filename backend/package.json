@@ -2,6 +2,7 @@
   "name": "engagement-platform-backend",
   "version": "1.0.0",
   "description": "Real-time audience engagement platform backend",
+  "type": "module",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

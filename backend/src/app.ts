@@ -3,11 +3,12 @@
  * REST API endpoints for the Engagement Platform
  */
 
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, Express } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { Server as SocketServer } from 'socket.io'; // Adding this to help with inference if needed
 
 import {
     generateJoinCode,
@@ -22,7 +23,7 @@ import db from './services/database.js';
 
 dotenv.config();
 
-const app = express();
+const app: Express = express();
 
 // ============================================
 // MIDDLEWARE
