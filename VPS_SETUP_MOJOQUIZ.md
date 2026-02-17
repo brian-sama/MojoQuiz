@@ -140,7 +140,7 @@ sudo npm install -g pm2
        server_name mojoquiz.co.zw www.mojoquiz.co.zw;
 
        location / {
-           root /home/brian/mojoquiz/frontend/dist;
+           root /home/brian/MojoQuiz/frontend/dist;
            index index.html;
            try_files $uri $uri/ /index.html;
        }

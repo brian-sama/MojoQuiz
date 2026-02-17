@@ -35,47 +35,47 @@ export const api = {
 
     // Sessions
     async createSession(title: string, mode: string) {
-        return this.request('api/sessions', {
+        return this.request('sessions', {
             method: 'POST',
             body: JSON.stringify({ title, mode }),
         });
     },
 
     async validateSession(code: string) {
-        return this.request(`api/sessions/${code.toUpperCase()}`);
+        return this.request(`sessions/${code.toUpperCase()}`);
     },
 
     async joinSession(code: string, nickname: string) {
-        return this.request(`api/join/${code.toUpperCase()}`);
+        return this.request(`join/${code.toUpperCase()}`);
     },
 
     async getSessionDetails(sessionId: string) {
         // In the new backend, we use joinCode or sessionId for info
         // Most session info is fetched via Socket.IO join events now, 
         // but we'll map this to the session info endpoint
-        return this.request(`api/sessions/${sessionId}`);
+        return this.request(`sessions/${sessionId}`);
     },
 
     async updateSession(id: string, updates: any) {
-        return this.request(`api/sessions/${id}`, {
+        return this.request(`sessions/${id}`, {
             method: 'PATCH',
             body: JSON.stringify(updates),
         });
     },
 
     async endSession(sessionId: string) {
-        return this.request(`api/sessions/${sessionId}/end`, {
+        return this.request(`sessions/${sessionId}/end`, {
             method: 'POST',
         });
     },
 
     // Questions
     async getQuestions(sessionId: string) {
-        return this.request(`api/sessions/${sessionId}/questions`);
+        return this.request(`sessions/${sessionId}/questions`);
     },
 
     async createQuestion(sessionId: string, data: any) {
-        return this.request(`api/sessions/${sessionId}/questions`, {
+        return this.request(`sessions/${sessionId}/questions`, {
             method: 'POST',
             body: JSON.stringify(data),
         });
@@ -89,12 +89,12 @@ export const api = {
     },
 
     async getResults(questionId: string) {
-        return this.request(`api/questions/${questionId}/results`);
+        return this.request(`questions/${questionId}/results`);
     },
 
     // Leaderboard
     async getLeaderboard(sessionId: string, limit = 10) {
-        return this.request(`api/sessions/${sessionId}/leaderboard?limit=${limit}`);
+        return this.request(`sessions/${sessionId}/leaderboard?limit=${limit}`);
     },
 };
 
