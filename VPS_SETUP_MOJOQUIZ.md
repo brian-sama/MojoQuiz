@@ -84,8 +84,8 @@ sudo npm install -g pm2
 1. **Clone Project**:
 
    ```bash
-   git clone git@github.com:your-repo/mojoquiz.git
-   cd mojoquiz
+   git clone https://github.com/brian-sama/MojoQuiz.git
+   cd MojoQuiz
    ```
 
 2. **Install & Build**:
