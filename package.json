@@ -1,0 +1,16 @@
+{
+    "name": "engagement-platform",
+    "version": "1.0.0",
+    "description": "Real-time audience engagement platform",
+    "private": true,
+    "scripts": {
+        "dev": "concurrently --names \"backend,frontend\" --prefix-colors \"blue,green\" \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+        "dev:backend": "npm run dev --prefix backend",
+        "dev:frontend": "npm run dev --prefix frontend",
+        "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+        "db:setup": "npm run db:setup --prefix backend"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}

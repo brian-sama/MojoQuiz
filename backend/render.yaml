@@ -1,0 +1,20 @@
+# Render.com Deployment Configuration
+# Deploy Node.js backend with WebSocket support
+
+services:
+  - type: web
+    name: engage-api
+    runtime: node
+    region: oregon  # or frankfurt for EU
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: CORS_ORIGIN
+        sync: false  # Your cPanel domain
+      - key: PORT
+        value: 10000
