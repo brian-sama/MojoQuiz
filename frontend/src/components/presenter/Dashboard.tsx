@@ -26,7 +26,9 @@ function PresenterDashboard() {
         setError('');
 
         try {
-            const data = await api.createSession(title.trim(), mode);
+            // Using a simple identifier for the presenter
+            const presenterId = 'brian-presenter';
+            const data = await api.createSession(title.trim(), mode, presenterId);
 
             // Store session info
             localStorage.setItem('currentSession', JSON.stringify(data));

@@ -34,10 +34,10 @@ export const api = {
     },
 
     // Sessions
-    async createSession(title: string, mode: string) {
+    async createSession(title: string, mode: string, presenterId: string) {
         return this.request('sessions', {
             method: 'POST',
-            body: JSON.stringify({ title, mode }),
+            body: JSON.stringify({ title, mode, presenterId }),
         });
     },
 
