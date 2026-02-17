@@ -6,7 +6,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import usePusher, { api } from '../../hooks/usePusher';
+import useSocket from '../../hooks/useSocket';
+import { api } from '../../hooks/useApi';
 import type { Question, ResponseSubmittedEvent } from '../../types';
 import PollQuestion from './PollQuestion';
 import WordCloudInput from './WordCloudInput';
@@ -16,7 +17,7 @@ import QuizQuestion from './QuizQuestion';
 function PlayPage() {
     const { code } = useParams<{ code: string }>();
     const navigate = useNavigate();
-    const { isConnected, subscribe, unsubscribe, bind, unbind } = usePusher();
+    const { isConnected, on, off, emit } = useSocket();
 
     // State
     const [sessionId, setSessionId] = useState('');
@@ -52,10 +53,10 @@ function PlayPage() {
             try {
                 const data = await api.getSessionDetails(storedSessionId);
                 setSessionTitle(data.session.title);
-                setParticipantCount(data.participants.length);
+                setParticipantCount(data.participantCount || 0);
 
                 // Check for active question
-                const active = data.questions.find((q: any) => q.status === 'active');
+                const active = data.active_question || (data.questions && data.questions.find((q: any) => q.status === 'active'));
                 if (active) {
                     setActiveQuestion(transformQuestion(active));
                     setWaiting(false);
@@ -71,181 +72,164 @@ function PlayPage() {
         loadSession();
     }, [code, navigate]);
 
-    // Subscribe to Pusher channel
+    // Subscribe to Socket.IO events
     useEffect(() => {
         if (!sessionId || !isConnected) return;
 
-        const channelName = `session-${sessionId}`;
-        subscribe(channelName);
+        // Join the session via Socket.IO
+        const storedCookieId = localStorage.getItem('participantCookie') || 'temp-cookie';
+        const nickname = sessionStorage.getItem('nickname') || '';
+
+        emit('join_session', {
+            join_code: code,
+            cookie_id: storedCookieId,
+            nickname
+        });
+
+        // Listen for confirmation
+        on('session_joined', (data: any) => {
+            setParticipantCount(data.participant_count);
+            if (data.active_question) {
+                setActiveQuestion(transformQuestion(data.active_question));
+                setWaiting(false);
+            }
+        });
 
         // Bind to events
-        bind(channelName, 'question-activated', (data: any) => {
+        on('question_activated', (data: any) => {
             setActiveQuestion(transformQuestion(data.question));
             setHasResponded(false);
             setResponseResult(null);
             setWaiting(false);
         });
 
-        bind(channelName, 'participant-joined', (data: any) => {
-            setParticipantCount(data.count);
+        on('participant_joined', (data: any) => {
+            setParticipantCount(data.participant_count);
         });
 
-        bind(channelName, 'participant-removed', (data: any) => {
-            if (data.participantId === participantId) {
+        on('participant_left', (data: any) => {
+            setParticipantCount(data.participant_count);
+        });
+
+        on('participant_removed', (data: any) => {
+            if (data.participant_id === participantId) {
                 setError('You have been removed from the session');
             }
         });
 
-        bind(channelName, 'voting-locked', (data: any) => {
-            if (activeQuestion && activeQuestion.id === data.questionId) {
-                setActiveQuestion({ ...activeQuestion, is_locked: true });
+        on('question_locked', (data: any) => {
+            if (activeQuestion && activeQuestion.id === data.question_id) {
+                setActiveQuestion(prev => prev ? { ...prev, is_locked: data.is_locked } : null);
             }
         });
 
-        bind(channelName, 'results-revealed', (data: any) => {
-            if (activeQuestion && activeQuestion.id === data.questionId) {
-                setActiveQuestion({ ...activeQuestion, is_results_visible: true });
+        on('results_revealed', (data: any) => {
+            if (activeQuestion && activeQuestion.id === data.question_id) {
+                setActiveQuestion(prev => prev ? { ...prev, is_results_visible: true } : null);
+                // Results are usually for presenter but could be shown to participants too
             }
         });
 
-        bind(channelName, 'session-ended', () => {
+        on('response_submitted', (data: any) => {
+            setResponseResult({
+                success: data.success,
+                question_id: data.question_id,
+                participant_id: participantId,
+                is_correct: data.is_correct,
+                score: data.score,
+                points_earned: data.score,
+                total_score: 0,
+                correct_answer_ids: [],
+            });
+        });
+
+        on('session_ended', () => {
             setWaiting(true);
             setActiveQuestion(null);
             setError('Session has ended');
         });
 
         return () => {
-            unbind(channelName, 'question-activated');
-            unbind(channelName, 'participant-joined');
-            unbind(channelName, 'participant-removed');
-            unbind(channelName, 'voting-locked');
-            unbind(channelName, 'results-revealed');
-            unbind(channelName, 'session-ended');
-            unsubscribe(channelName);
+            off('session_joined');
+            off('question_activated');
+            off('participant_joined');
+            off('participant_left');
+            off('participant_removed');
+            off('question_locked');
+            off('results_revealed');
+            off('session_ended');
         };
-    }, [sessionId, isConnected, subscribe, unsubscribe, bind, unbind, participantId, activeQuestion]);
+    }, [sessionId, isConnected, on, off, emit, participantId, activeQuestion, code]);
 
-    // Transform PHP response to frontend format
+    // Transform response to frontend format
     const transformQuestion = (q: any): Question => ({
         id: q.id,
         session_id: q.session_id,
-        question_type: q.type,
-        question_text: q.title,
-        description: q.description,
+        question_type: q.question_type || q.type,
+        question_text: q.question_text || q.title,
+        description: q.description || '',
         options: q.options || [],
         settings: q.settings || {},
         display_order: q.display_order || 0,
         order_index: q.order_index,
-        time_limit: q.settings?.time_limit || null,
+        time_limit: q.time_limit || q.settings?.time_limit || null,
         is_active: q.status === 'active',
-        is_locked: q.status === 'locked',
+        is_locked: q.status === 'locked' || q.is_locked,
         is_results_visible: q.status === 'revealed',
         started_at: q.started_at,
         response_count: q.response_count || 0,
     });
 
-    // Submit response via API
-    const submitResponse = useCallback(async (responseData: any) => {
+    // Submit response via Socket.IO
+    const submitResponse = useCallback((responseData: any) => {
         if (!activeQuestion || !sessionId || !participantId) return;
 
-        try {
-            const result = await api.submitResponse({
-                session_id: sessionId,
-                question_id: activeQuestion.id,
-                participant_id: participantId,
-                token: participantToken,
-                answer_type: 'choice',
-                selected_options: responseData.selected_options || [responseData],
-                response_time_ms: responseData.response_time_ms || 0,
-            });
-
-            setHasResponded(true);
-            setResponseResult({
-                success: true,
-                question_id: activeQuestion.id,
-                participant_id: participantId,
-                is_correct: result.isCorrect,
-                points_earned: result.pointsEarned,
-                total_score: 0, // Will be updated from leaderboard
-                correct_answer_ids: [],
-            });
-        } catch (err: any) {
-            if (err.message?.includes('Already submitted')) {
-                setHasResponded(true);
-            } else {
-                setError(err.message || 'Failed to submit response');
+        emit('submit_response', {
+            question_id: activeQuestion.id,
+            response_data: {
+                option_index: responseData.option_index ?? responseData,
+                response_time_ms: responseData.response_time_ms || 0
             }
-        }
-    }, [activeQuestion, sessionId, participantId, participantToken]);
+        });
+
+        setHasResponded(true);
+    }, [activeQuestion, sessionId, participantId, emit]);
 
     // Submit words for word cloud
-    const submitWords = useCallback(async (words: string[]) => {
+    const submitWords = useCallback((words: string[]) => {
         if (!activeQuestion || !sessionId || !participantId) return;
 
-        try {
-            await api.submitResponse({
-                session_id: sessionId,
-                question_id: activeQuestion.id,
-                participant_id: participantId,
-                token: participantToken,
-                answer_type: 'word_cloud',
-                word_responses: words,
-            });
-            setHasResponded(true);
-        } catch (err: any) {
-            if (err.message?.includes('Already submitted')) {
-                setHasResponded(true);
-            } else {
-                setError(err.message || 'Failed to submit words');
-            }
-        }
-    }, [activeQuestion, sessionId, participantId, participantToken]);
+        emit('submit_words', {
+            question_id: activeQuestion.id,
+            words
+        });
+
+        setHasResponded(true);
+    }, [activeQuestion, sessionId, participantId, emit]);
 
     // Submit text response
-    const submitText = useCallback(async (content: string) => {
+    const submitText = useCallback((content: string) => {
         if (!activeQuestion || !sessionId || !participantId) return;
 
-        try {
-            await api.submitResponse({
-                session_id: sessionId,
-                question_id: activeQuestion.id,
-                participant_id: participantId,
-                token: participantToken,
-                answer_type: 'text',
-                text_response: content,
-            });
-            setHasResponded(true);
-        } catch (err: any) {
-            if (err.message?.includes('Already submitted')) {
-                setHasResponded(true);
-            } else {
-                setError(err.message || 'Failed to submit response');
-            }
-        }
-    }, [activeQuestion, sessionId, participantId, participantToken]);
+        emit('submit_text', {
+            question_id: activeQuestion.id,
+            content
+        });
+
+        setHasResponded(true);
+    }, [activeQuestion, sessionId, participantId, emit]);
 
     // Submit scale response
-    const submitScale = useCallback(async (value: number) => {
+    const submitScale = useCallback((value: number) => {
         if (!activeQuestion || !sessionId || !participantId) return;
 
-        try {
-            await api.submitResponse({
-                session_id: sessionId,
-                question_id: activeQuestion.id,
-                participant_id: participantId,
-                token: participantToken,
-                answer_type: 'scale',
-                scale_value: value,
-            });
-            setHasResponded(true);
-        } catch (err: any) {
-            if (err.message?.includes('Already submitted')) {
-                setHasResponded(true);
-            } else {
-                setError(err.message || 'Failed to submit response');
-            }
-        }
-    }, [activeQuestion, sessionId, participantId, participantToken]);
+        emit('submit_response', {
+            question_id: activeQuestion.id,
+            response_data: { value }
+        });
+
+        setHasResponded(true);
+    }, [activeQuestion, sessionId, participantId, emit]);
 
     // Render question based on type
     const renderQuestion = () => {

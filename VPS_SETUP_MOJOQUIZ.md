@@ -186,5 +186,6 @@ sudo npm install -g pm2
 
 - [ ] **Firewall**: Ensure ports 80, 443, and 22 are open.
 - [ ] **DB Password**: If password contains `@`, `$`, or `#`, use `%40`, `%24`, `%23` respectively in `DATABASE_URL`.
+- [ ] **Permissions**: Nginx needs access to your home directory. Run `chmod +x /home/brian` to allow it.
 - [ ] **Socket.IO**: The Nginx `/socket.io/` block is CRITICAL for real-time functionality.
 - [ ] **CORS**: Ensure `CORS_ORIGIN` in backend `.env` matches your production domain.

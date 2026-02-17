@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../hooks/usePusher';
+import { api } from '../../hooks/useApi';
 
 function PresenterDashboard() {
     const navigate = useNavigate();

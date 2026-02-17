@@ -6,7 +6,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import usePusher, { api } from '../../hooks/usePusher';
+import useSocket from '../../hooks/useSocket';
+import { api } from '../../hooks/useApi';
 import type { Question, PollResults, WordCloudWord } from '../../types';
 
 interface Session {
@@ -20,7 +21,7 @@ interface Session {
 function HostSession() {
     const { sessionId } = useParams<{ sessionId: string }>();
     const navigate = useNavigate();
-    const { isConnected, subscribe, unsubscribe, bind, unbind } = usePusher();
+    const { isConnected, on, off, emit } = useSocket();
 
     // State
     const [session, setSession] = useState<Session | null>(null);
@@ -53,12 +54,12 @@ function HostSession() {
             setSession({
                 id: data.session.id,
                 title: data.session.title,
-                join_code: data.session.join_code,
+                join_code: data.session.join_code || data.session.joinCode,
                 mode: data.session.mode,
                 status: data.session.status,
             });
             setQuestions(data.questions.map(transformQuestion));
-            setParticipantCount(data.participants.length);
+            setParticipantCount(data.participantCount || 0);
 
             // Check for active question
             const active = data.questions.find((q: any) => q.status === 'active');
@@ -73,151 +74,136 @@ function HostSession() {
         }
     };
 
-    // Transform PHP response to frontend format
+    // Transform response to frontend format
     const transformQuestion = (q: any): Question => ({
         id: q.id,
         session_id: q.session_id,
-        question_type: q.type,
-        question_text: q.title,
-        description: q.description,
+        question_type: q.question_type || q.type,
+        question_text: q.question_text || q.title,
+        description: q.description || '',
         options: q.options || [],
         settings: q.settings || {},
         display_order: q.display_order || 0,
         order_index: q.order_index,
-        time_limit: q.settings?.time_limit || null,
+        time_limit: q.time_limit || q.settings?.time_limit || null,
         is_active: q.status === 'active',
-        is_locked: q.status === 'locked',
+        is_locked: q.status === 'locked' || q.is_locked,
         is_results_visible: q.status === 'revealed',
         started_at: q.started_at,
         response_count: q.response_count || 0,
     });
 
-    // Subscribe to Pusher channel
+    // Subscribe to Socket.IO events
     useEffect(() => {
         if (!sessionId || !isConnected) return;
 
-        const channelName = `session-${sessionId}`;
-        subscribe(channelName);
+        // Join as presenter
+        emit('presenter_join', { session_id: sessionId, presenter_id: 'brian-presenter' });
 
-        bind(channelName, 'participant-joined', (data: any) => {
-            setParticipantCount(data.count);
+        on('presenter_joined', (data: any) => {
+            setParticipantCount(data.participant_count);
         });
 
-        bind(channelName, 'response-received', (data: any) => {
-            setResponseCount(data.responseCount);
+        on('participant_joined', (data: any) => {
+            setParticipantCount(data.participant_count);
+        });
 
-            // Update word cloud results
-            if (data.wordCloud) {
-                setResults(data.wordCloud.map((w: any) => ({ word: w.word, weight: w.count })));
+        on('participant_left', (data: any) => {
+            setParticipantCount(data.participant_count);
+        });
+
+        on('results_updated', (data: any) => {
+            setResponseCount(data.response_count);
+            if (activeQuestion && activeQuestion.id === data.question_id) {
+                setResults(data.results);
             }
         });
 
-        bind(channelName, 'question-added', (data: any) => {
-            setQuestions(prev => [...prev, transformQuestion(data)]);
-        });
+        on('word_cloud_updated', (data: any) => {
+            if (activeQuestion && activeQuestion.id === data.question_id) {
+                setResults(data.words.map((w: any) => ({ word: w.word, weight: w.count })));
+            }
+            on('question_activated', (data: any) => {
+                setResponseCount(data.response_count || 0);
+                setResults(null);
+                setActiveQuestion(transformQuestion(data.question));
+            });
 
-        return () => {
-            unbind(channelName, 'participant-joined');
-            unbind(channelName, 'response-received');
-            unbind(channelName, 'question-added');
-            unsubscribe(channelName);
-        };
-    }, [sessionId, isConnected, subscribe, unsubscribe, bind, unbind]);
+            on('question_locked', (data: any) => {
+                if (activeQuestion && activeQuestion.id === data.question_id) {
+                    setActiveQuestion(prev => prev ? { ...prev, is_locked: data.is_locked } : null);
+                }
+            });
 
-    // Create a new question
-    const handleCreateQuestion = async () => {
-        if (!newQuestion.text.trim()) return;
+            on('results_revealed', (data: any) => {
+                if (activeQuestion && activeQuestion.id === data.question_id) {
+                    setActiveQuestion(prev => prev ? { ...prev, is_results_visible: true } : null);
+                    setResults(data.results);
+                }
+            });
 
-        try {
-            const options = newQuestion.type === 'poll' || newQuestion.type === 'quiz_mc'
-                ? newQuestion.options
-                    .filter(o => o.trim())
-                    .map((text, i) => ({
+            return () => {
+                off('presenter_joined');
+                off('participant_joined');
+                off('participant_left');
+                off('results_updated');
+                off('word_cloud_updated');
+                off('question_activated');
+                off('question_locked');
+                off('results_revealed');
+            };
+        }, [sessionId, isConnected, on, off, emit, activeQuestion]);
+
+        // Create a new question
+        const handleCreateQuestion = async () => {
+            if (!newQuestion.text.trim()) return;
+
+            try {
+                await api.createQuestion(sessionId!, {
+                    questionType: newQuestion.type,
+                    questionText: newQuestion.text,
+                    options: newQuestion.options.filter(o => o.trim()).map((text, i) => ({
                         id: `opt_${i}`,
                         text,
                         is_correct: newQuestion.type === 'quiz_mc' && i === newQuestion.correctOption,
-                    }))
-                : newQuestion.type === 'quiz_tf'
-                    ? [
-                        { id: 'true', text: 'True', is_correct: newQuestion.correctOption === 0 },
-                        { id: 'false', text: 'False', is_correct: newQuestion.correctOption === 1 },
-                    ]
-                    : null;
-
-            await api.createQuestion({
-                session_id: sessionId,
-                type: newQuestion.type,
-                title: newQuestion.text,
-                options,
-                settings: {
-                    time_limit: newQuestion.type.startsWith('quiz_') ? newQuestion.timeLimit : null,
-                },
-            });
-
-            setShowBuilder(false);
-            setNewQuestion({ type: 'poll', text: '', options: ['', '', '', ''], timeLimit: 30, correctOption: 0 });
-            loadSession(); // Refresh questions
-        } catch (err) {
-            console.error('Failed to create question:', err);
-        }
-    };
-
-    // Activate a question
-    const activateQuestion = useCallback(async (questionId: string) => {
-        try {
-            await api.activateQuestion(questionId);
-            setResponseCount(0);
-            setResults(null);
-            const q = questions.find(q => q.id === questionId);
-            if (q) setActiveQuestion({ ...q, is_active: true, is_locked: false });
-        } catch (err) {
-            console.error('Failed to activate question:', err);
-        }
-    }, [questions]);
-
-    // Lock/unlock voting
-    const toggleLock = useCallback(async (locked: boolean) => {
-        if (!activeQuestion) return;
-        try {
-            await api.lockQuestion(activeQuestion.id);
-            setActiveQuestion({ ...activeQuestion, is_locked: locked });
-        } catch (err) {
-            console.error('Failed to lock question:', err);
-        }
-    }, [activeQuestion]);
-
-    // Show results
-    const revealResults = useCallback(async () => {
-        if (!activeQuestion) return;
-        try {
-            const data = await api.revealResults(activeQuestion.id);
-
-            // Process poll results
-            if (activeQuestion.question_type === 'poll' && data.responses) {
-                const pollResults: PollResults = {};
-                data.responses.forEach((r: any) => {
-                    if (r.selected_options) {
-                        r.selected_options.forEach((_: string, index: number) => {
-                            pollResults[String(index)] = (pollResults[String(index)] || 0) + 1;
-                        });
-                    }
+                    })),
+                    settings: {
+                        time_limit: newQuestion.type.startsWith('quiz_') ? newQuestion.timeLimit : null,
+                    },
                 });
-                setResults(pollResults);
+
+                setShowBuilder(false);
+                setNewQuestion({ type: 'poll', text: '', options: ['', '', '', ''], timeLimit: 30, correctOption: 0 });
+                loadSession(); // Refresh questions
+            } catch (err) {
+                console.error('Failed to create question:', err);
             }
+        };
 
-            // Process word cloud results
-            if (activeQuestion.question_type === 'word_cloud' && data.wordCloud) {
-                setResults(data.wordCloud.map((w: any) => ({ word: w.word, weight: w.count })));
+        // Activate a question
+        const activateQuestion = useCallback((questionId: string) => {
+            emit('activate_question', { question_id: questionId });
+        }, [emit]);
+
+        // Lock/unlock voting
+        const toggleLock = useCallback((locked: boolean) => {
+            if (!activeQuestion) return;
+            emit('lock_question', { question_id: activeQuestion.id, locked });
+        }, [activeQuestion, emit]);
+
+        // Show results
+        const revealResults = useCallback(() => {
+            if (!activeQuestion) return;
+            emit('show_results', { question_id: activeQuestion.id });
+        }, [activeQuestion, emit]);
+
+        // End session
+        const endSession = useCallback(() => {
+            if (window.confirm('Are you sure you want to end this session?')) {
+                emit('end_session');
+                navigate('/host');
             }
-
-            setActiveQuestion({ ...activeQuestion, is_results_visible: true });
-        } catch (err) {
-            console.error('Failed to reveal results:', err);
-        }
-    }, [activeQuestion]);
-
-    // End session
-    const endSession = useCallback(async () => {
+        }, [emit, navigate]);
         try {
             await api.endSession(sessionId!);
             navigate('/host');

@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../../hooks/usePusher';
+import { api } from '../../hooks/useApi';
 
 function JoinPage() {
     const { code: urlCode } = useParams<{ code: string }>();
