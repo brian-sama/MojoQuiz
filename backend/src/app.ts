@@ -151,7 +151,7 @@ app.get('/api/sessions/:idOrCode', async (req: Request, res: Response) => {
                 expiresAt: session.expires_at,
             },
             participantCount,
-            questionCount: questions.length,
+            questions,
         });
 
     } catch (error) {

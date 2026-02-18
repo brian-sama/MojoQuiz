@@ -60,11 +60,11 @@ function HostSession() {
                 mode: data.session.mode,
                 status: data.session.status,
             });
-            setQuestions(data.questions.map(transformQuestion));
+            setQuestions((data.questions || []).map(transformQuestion));
             setParticipantCount(data.participantCount || 0);
 
             // Check for active question
-            const active = data.questions.find((q: any) => q.status === 'active');
+            const active = (data.questions || []).find((q: any) => q.status === 'active');
             if (active) {
                 setActiveQuestion(transformQuestion(active));
             }
