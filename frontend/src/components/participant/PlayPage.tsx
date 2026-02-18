@@ -13,6 +13,8 @@ import PollQuestion from './PollQuestion';
 import WordCloudInput from './WordCloudInput';
 import ScaleQuestion from './ScaleQuestion';
 import QuizQuestion from './QuizQuestion';
+import RankingQuestion from './RankingQuestion';
+import PinImageQuestion from './PinImageQuestion';
 
 function PlayPage() {
     const { code } = useParams<{ code: string }>();
@@ -157,6 +159,14 @@ function PlayPage() {
         };
     }, [sessionId, isConnected, on, off, emit, participantId, activeQuestion, code]);
 
+    // Handle body class for mobile app feel
+    useEffect(() => {
+        document.body.classList.add('participant-view');
+        return () => {
+            document.body.classList.remove('participant-view');
+        };
+    }, []);
+
     // Transform response to frontend format
     const transformQuestion = (q: any): Question => ({
         id: q.id,
@@ -257,6 +267,26 @@ function PlayPage() {
                     <ScaleQuestion
                         question={activeQuestion}
                         onSubmit={(data) => submitScale(data.value)}
+                        disabled={hasResponded || activeQuestion.is_locked}
+                        hasResponded={hasResponded}
+                    />
+                );
+
+            case 'ranking':
+                return (
+                    <RankingQuestion
+                        question={activeQuestion}
+                        onSubmit={submitResponse}
+                        disabled={hasResponded || activeQuestion.is_locked}
+                        hasResponded={hasResponded}
+                    />
+                );
+
+            case 'pin_image':
+                return (
+                    <PinImageQuestion
+                        question={activeQuestion}
+                        onSubmit={submitResponse}
                         disabled={hasResponded || activeQuestion.is_locked}
                         hasResponded={hasResponded}
                     />
@@ -369,15 +399,28 @@ function PlayPage() {
     }
 
     return (
-        <div className="page">
-            <header className="play-header">
-                <span className="text-muted">{sessionTitle}</span>
-                <span className="text-muted">👥 {participantCount}</span>
+        <div className="participant-container">
+            <header className="participant-header">
+                <div>
+                    <h3 className="text-sm font-semibold">{sessionTitle || 'MojoQuiz'}</h3>
+                    <div className="text-xs text-muted">Join Code: {code?.toUpperCase()}</div>
+                </div>
+                <div className="flex items-center gap-sm">
+                    <span className="text-sm">👥 {participantCount}</span>
+                </div>
             </header>
 
-            <main className="container flex-1">
-                {renderQuestion()}
+            <main className="participant-main">
+                <div className="question-card-mobile animate-slide-up">
+                    {renderQuestion()}
+                </div>
             </main>
+
+            <footer className="participant-footer">
+                <div className="mb-xs">MojoQuiz • Interactive Engagement</div>
+                {!isConnected && <div className="text-warning">Connecting...</div>}
+                {hasResponded && <div className="text-success">✓ Response Submitted</div>}
+            </footer>
         </div>
     );
 }

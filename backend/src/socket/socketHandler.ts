@@ -293,7 +293,27 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
                 // Send updated results to presenter
-                const results = await db.getPollResults(question_id);
+                let results: any;
+
+                switch (question.question_type) {
+                    case 'poll':
+                    case 'quiz_mc':
+                    case 'quiz_tf':
+                        results = await db.getPollResults(question_id);
+                        break;
+                    case 'scale':
+                        results = await db.getScaleStatistics(question_id);
+                        break;
+                    case 'ranking':
+                        results = await db.getRankingResults(question_id);
+                        break;
+                    case 'pin_image':
+                        results = await db.getPinImageResults(question_id);
+                        break;
+                    default:
+                        results = await db.getPollResults(question_id);
+                }
+
                 io.to(`presenter:${socketData.sessionId}`).emit('results_updated', {
                     question_id,
                     response_count: responseCount,

@@ -363,6 +363,38 @@ export async function getScaleStatistics(questionId: string): Promise<{
   };
 }
 
+export async function getRankingResults(questionId: string): Promise<{ [optionIndex: string]: number }> {
+  // Calculates average rank for each option
+  // Score = sum(rank) / count. Lower is better.
+  const result = await sql`
+    SELECT 
+      jsonb_array_elements(response_data->'ranking')->>'index' as option_index,
+      AVG((jsonb_array_elements(response_data->'ranking')->>'rank')::numeric) as average_rank
+    FROM responses
+    WHERE question_id = ${questionId}
+    GROUP BY option_index
+  `;
+
+  const results: { [key: string]: number } = {};
+  result.forEach((row: any) => {
+    results[row.option_index] = parseFloat(row.average_rank);
+  });
+  return results;
+}
+
+export async function getPinImageResults(questionId: string): Promise<{ x: number, y: number }[]> {
+  const result = await sql`
+    SELECT response_data->>'x' as x, response_data->>'y' as y
+    FROM responses
+    WHERE question_id = ${questionId}
+  `;
+
+  return result.map((row: any) => ({
+    x: parseFloat(row.x),
+    y: parseFloat(row.y)
+  }));
+}
+
 // ============================================
 // WORD CLOUD OPERATIONS
 // ============================================
@@ -509,10 +541,11 @@ export default {
   getActiveQuestion,
 
   // Response
-  submitResponse,
-  getResponseCount,
+  // Result Utilities
   getPollResults,
   getScaleStatistics,
+  getRankingResults,
+  getPinImageResults,
 
   // Word Cloud
   submitWords,

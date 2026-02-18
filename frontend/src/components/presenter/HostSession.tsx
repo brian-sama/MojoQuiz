@@ -47,6 +47,12 @@ function HostSession() {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
 
+    // AI Extractor state
+    const [builderTab, setBuilderTab] = useState<'individual' | 'ai'>('individual');
+    const [sourceText, setSourceText] = useState('');
+    const [isExtracting, setIsExtracting] = useState(false);
+    const [extractedQuestions, setExtractedQuestions] = useState<any[]>([]);
+
     // Load session data
     useEffect(() => {
         if (!sessionId) return;
@@ -213,6 +219,49 @@ function HostSession() {
         }
     };
 
+    // AI Extraction logic
+    const handleExtractQuestions = async () => {
+        if (!sourceText.trim() || sourceText.trim().length < 50) {
+            alert('Please provide at least 50 characters of source text.');
+            return;
+        }
+
+        setIsExtracting(true);
+        try {
+            const data = await api.extractQuestions(sessionId!, sourceText);
+            setExtractedQuestions(data.questions);
+        } catch (err: any) {
+            console.error('Extraction failed:', err);
+            alert(err.message || 'Failed to extract questions.');
+        } finally {
+            setIsExtracting(false);
+        }
+    };
+
+    const handleBulkAdd = async () => {
+        if (extractedQuestions.length === 0) return;
+
+        try {
+            for (const q of extractedQuestions) {
+                await api.createQuestion(sessionId!, {
+                    questionType: q.question_type,
+                    questionText: q.question_text,
+                    options: q.options?.map((text: string) => ({ text })),
+                    correctAnswer: q.correct_answer,
+                    timeLimit: q.time_limit,
+                });
+            }
+
+            setShowBuilder(false);
+            setExtractedQuestions([]);
+            setSourceText('');
+            loadSession();
+        } catch (err) {
+            console.error('Bulk add failed:', err);
+            alert('Failed to add some questions. Please check your list.');
+        }
+    };
+
     // Activate a question
     const activateQuestion = useCallback((questionId: string) => {
         emit('activate_question', { question_id: questionId });
@@ -360,6 +409,20 @@ function HostSession() {
                                         {results && activeQuestion.question_type === 'word_cloud' && (
                                             <WordCloudDisplay words={results as WordCloudWord[]} />
                                         )}
+
+                                        {results && activeQuestion.question_type === 'ranking' && (
+                                            <RankingResultsDisplay
+                                                results={results as { [key: string]: number }}
+                                                options={activeQuestion.options || []}
+                                            />
+                                        )}
+
+                                        {results && activeQuestion.question_type === 'pin_image' && (
+                                            <PinImageResultsDisplay
+                                                results={results as { x: number, y: number }[]}
+                                                imageUrl={activeQuestion.options?.[0]?.text || ''}
+                                            />
+                                        )}
                                     </>
                                 )}
                             </div>
@@ -387,114 +450,177 @@ function HostSession() {
             {showBuilder && (
                 <div className="modal-overlay">
                     <div className="card modal-content">
-                        <h2 className="mb-lg">Add Question</h2>
-
-                        <div className="mb-md">
-                            <label htmlFor="question-type" className="form-label">Type</label>
-                            <select
-                                id="question-type"
-                                className="input"
-                                value={newQuestion.type}
-                                onChange={(e) => setNewQuestion({ ...newQuestion, type: e.target.value })}
-                                aria-label="Question type"
-                            >
-                                {session?.mode === 'quiz' ? (
-                                    <>
-                                        <option value="quiz_mc">Quiz - Multiple Choice</option>
-                                        <option value="quiz_tf">Quiz - True/False</option>
-                                    </>
-                                ) : (
-                                    <>
-                                        <option value="poll">Poll</option>
-                                        <option value="word_cloud">Word Cloud</option>
-                                        <option value="scale">Scale</option>
-                                    </>
-                                )}
-                            </select>
+                        <div className="flex justify-between items-center mb-lg">
+                            <h2>Add Question</h2>
+                            <div className="tab-group">
+                                <button
+                                    className={`tab-btn ${builderTab === 'individual' ? 'active' : ''}`}
+                                    onClick={() => setBuilderTab('individual')}
+                                >
+                                    Individual
+                                </button>
+                                <button
+                                    className={`tab-btn ${builderTab === 'ai' ? 'active' : ''}`}
+                                    onClick={() => setBuilderTab('ai')}
+                                >
+                                    AI Extractor
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="mb-md">
-                            <label htmlFor="question-text" className="form-label">Question Text</label>
-                            <textarea
-                                id="question-text"
-                                className="input"
-                                rows={3}
-                                placeholder="Enter your question..."
-                                value={newQuestion.text}
-                                onChange={(e) => setNewQuestion({ ...newQuestion, text: e.target.value })}
-                            />
-                        </div>
+                        {builderTab === 'individual' ? (
+                            <>
 
-                        {(newQuestion.type === 'poll' || newQuestion.type === 'quiz_mc') && (
-                            <div className="mb-md">
-                                <label className="form-label">Options</label>
-                                {newQuestion.options.map((opt, i) => (
-                                    <div key={i} className="option-row mb-sm">
+                                <div className="mb-md">
+                                    <label htmlFor="question-type" className="form-label">Type</label>
+                                    <select
+                                        id="question-type"
+                                        className="input"
+                                        value={newQuestion.type}
+                                        onChange={(e) => setNewQuestion({ ...newQuestion, type: e.target.value })}
+                                        aria-label="Question type"
+                                    >
+                                        {session?.mode === 'quiz' ? (
+                                            <>
+                                                <option value="quiz_mc">Quiz - Multiple Choice</option>
+                                                <option value="quiz_tf">Quiz - True/False</option>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <option value="poll">Poll</option>
+                                                <option value="word_cloud">Word Cloud</option>
+                                                <option value="scale">Scale</option>
+                                                <option value="ranking">Ranking</option>
+                                                <option value="pin_image">Pin on Image</option>
+                                            </>
+                                        )}
+                                    </select>
+                                </div>
+
+                                <div className="mb-md">
+                                    <label htmlFor="question-text" className="form-label">Question Text</label>
+                                    <textarea
+                                        id="question-text"
+                                        className="input"
+                                        rows={3}
+                                        placeholder="Enter your question..."
+                                        value={newQuestion.text}
+                                        onChange={(e) => setNewQuestion({ ...newQuestion, text: e.target.value })}
+                                    />
+                                </div>
+
+                                {newQuestion.type === 'pin_image' && (
+                                    <div className="mb-md">
+                                        <label htmlFor="image-url" className="form-label">Image URL (for participants to pin)</label>
                                         <input
-                                            type="text"
+                                            id="image-url"
                                             className="input"
-                                            placeholder={`Option ${i + 1}`}
-                                            value={opt}
+                                            type="text"
+                                            placeholder="https://example.com/image.jpg"
+                                            value={newQuestion.options[0]}
                                             onChange={(e) => {
                                                 const opts = [...newQuestion.options];
-                                                opts[i] = e.target.value;
+                                                opts[0] = e.target.value;
                                                 setNewQuestion({ ...newQuestion, options: opts });
                                             }}
-                                            aria-label={`Option ${i + 1}`}
                                         />
-                                        {newQuestion.type === 'quiz_mc' && (
-                                            <label className="correct-label">
+                                    </div>
+                                )}
+
+                                {(newQuestion.type === 'poll' || newQuestion.type === 'quiz_mc' || newQuestion.type === 'ranking') && (
+                                    <div className="mb-md">
+                                        <label className="form-label">Options</label>
+                                        {newQuestion.options.map((opt, i) => (
+                                            <div key={i} className="option-row mb-sm">
+                                                <input
+                                                    type="text"
+                                                    className="input"
+                                                    placeholder={`Option ${i + 1}`}
+                                                    value={opt}
+                                                    onChange={(e) => {
+                                                        const opts = [...newQuestion.options];
+                                                        opts[i] = e.target.value;
+                                                        setNewQuestion({ ...newQuestion, options: opts });
+                                                    }}
+                                                    aria-label={`Option ${i + 1}`}
+                                                />
+                                                {newQuestion.type === 'quiz_mc' && (
+                                                    <label className="correct-label">
+                                                        <input
+                                                            type="radio"
+                                                            name="correctOption"
+                                                            checked={newQuestion.correctOption === i}
+                                                            onChange={() => setNewQuestion({ ...newQuestion, correctOption: i })}
+                                                        />
+                                                        Correct
+                                                    </label>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {newQuestion.type === 'quiz_tf' && (
+                                    <div className="mb-md">
+                                        <label className="form-label">Correct Answer</label>
+                                        <div className="flex gap-md">
+                                            <label>
                                                 <input
                                                     type="radio"
-                                                    name="correctOption"
-                                                    checked={newQuestion.correctOption === i}
-                                                    onChange={() => setNewQuestion({ ...newQuestion, correctOption: i })}
-                                                />
-                                                Correct
+                                                    name="correctTF"
+                                                    checked={newQuestion.correctOption === 0}
+                                                    onChange={() => setNewQuestion({ ...newQuestion, correctOption: 0 })}
+                                                /> True
                                             </label>
-                                        )}
+                                            <label>
+                                                <input
+                                                    type="radio"
+                                                    name="correctTF"
+                                                    checked={newQuestion.correctOption === 1}
+                                                    onChange={() => setNewQuestion({ ...newQuestion, correctOption: 1 })}
+                                                /> False
+                                            </label>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                )}
 
-                        {newQuestion.type === 'quiz_tf' && (
-                            <div className="mb-md">
-                                <label className="form-label">Correct Answer</label>
-                                <div className="flex gap-md">
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="correctTF"
-                                            checked={newQuestion.correctOption === 0}
-                                            onChange={() => setNewQuestion({ ...newQuestion, correctOption: 0 })}
-                                        /> True
+                            </>
+                        ) : (
+                            <div className="ai-extractor-content">
+                                <div className="mb-md">
+                                    <label htmlFor="source-text" className="form-label">
+                                        Source Text (notes, articles, reports)
                                     </label>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="correctTF"
-                                            checked={newQuestion.correctOption === 1}
-                                            onChange={() => setNewQuestion({ ...newQuestion, correctOption: 1 })}
-                                        /> False
-                                    </label>
+                                    <textarea
+                                        id="source-text"
+                                        className="input"
+                                        rows={6}
+                                        placeholder="Paste your resources here (min 50 characters)..."
+                                        value={sourceText}
+                                        onChange={(e) => setSourceText(e.target.value)}
+                                    />
                                 </div>
-                            </div>
-                        )}
 
-                        {newQuestion.type.startsWith('quiz_') && (
-                            <div className="mb-md">
-                                <label htmlFor="time-limit" className="form-label">Time Limit (seconds)</label>
-                                <input
-                                    id="time-limit"
-                                    type="number"
-                                    className="input"
-                                    value={newQuestion.timeLimit}
-                                    onChange={(e) => setNewQuestion({ ...newQuestion, timeLimit: parseInt(e.target.value) })}
-                                    min={5}
-                                    max={120}
-                                    aria-label="Time limit in seconds"
-                                />
+                                <button
+                                    className="btn btn-secondary btn-block mb-lg"
+                                    onClick={handleExtractQuestions}
+                                    disabled={isExtracting || sourceText.length < 50}
+                                >
+                                    {isExtracting ? 'Extracting...' : '✨ Generate Questions'}
+                                </button>
+
+                                {extractedQuestions.length > 0 && (
+                                    <div className="extracted-questions-preview mb-lg">
+                                        <h4 className="mb-sm">Preview ({extractedQuestions.length} questions)</h4>
+                                        <div className="preview-list">
+                                            {extractedQuestions.map((q, i) => (
+                                                <div key={i} className="preview-item">
+                                                    <strong>{q.question_type.toUpperCase()}</strong>: {q.question_text}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -502,12 +628,24 @@ function HostSession() {
                             <button className="btn btn-secondary" onClick={() => setShowBuilder(false)}>
                                 Cancel
                             </button>
-                            <button className="btn btn-secondary" onClick={() => handleCreateQuestion(false)}>
-                                Save & Add Another
-                            </button>
-                            <button className="btn btn-primary" onClick={() => handleCreateQuestion(true)}>
-                                Add Question
-                            </button>
+                            {builderTab === 'individual' ? (
+                                <>
+                                    <button className="btn btn-secondary" onClick={() => handleCreateQuestion(false)}>
+                                        Save & Add Another
+                                    </button>
+                                    <button className="btn btn-primary" onClick={() => handleCreateQuestion(true)}>
+                                        Add Question
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleBulkAdd}
+                                    disabled={extractedQuestions.length === 0}
+                                >
+                                    Add All Extracted
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -622,6 +760,66 @@ function WordCloudDisplay({ words }: { words: WordCloudWord[] }) {
                     </span>
                 );
             })}
+        </div>
+    );
+}
+
+// Ranking Results Display
+function RankingResultsDisplay({ results, options }: { results: { [key: string]: number }, options: QuestionOption[] }) {
+    // Sort options by average rank (ascending, as smaller rank is better)
+    const sortedOptions = [...options].sort((a, b) => {
+        const rankA = results[options.indexOf(a)] || 0;
+        const rankB = results[options.indexOf(b)] || 0;
+        return rankA - rankB;
+    });
+
+    return (
+        <div className="ranking-results flex flex-col gap-md">
+            {sortedOptions.map((opt, i) => {
+                const avgRank = results[options.indexOf(opt)] || 0;
+                return (
+                    <div key={opt.id} className="ranking-result-item">
+                        <div className="flex justify-between mb-xs">
+                            <span className="font-bold">{i + 1}. {opt.text}</span>
+                            <span className="text-muted">Avg Rank: {avgRank.toFixed(1)}</span>
+                        </div>
+                        <div className="ranking-bar-bg">
+                            <div
+                                className="ranking-bar-fill"
+                                style={{
+                                    width: `${avgRank > 0 ? (1 / avgRank) * 100 : 0}%`,
+                                    background: `var(--color-option-${(options.indexOf(opt) % 4) + 1})`
+                                } as React.CSSProperties}
+                            />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+// Pin Image Results Display
+function PinImageResultsDisplay({ results, imageUrl }: { results: { x: number, y: number }[], imageUrl: string }) {
+    return (
+        <div className="pin-image-results">
+            <div className="relative inline-block overflow-hidden rounded-lg">
+                <img src={imageUrl} alt="Background" className="max-w-full h-auto block" />
+                <div className="absolute inset-0">
+                    {results.map((pin, i) => (
+                        <div
+                            key={i}
+                            className="pin-marker fade-in"
+                            style={{
+                                left: `${pin.x}%`,
+                                top: `${pin.y}%`,
+                                transform: 'translate(-50%, -50%)'
+                            } as React.CSSProperties}
+                        />
+                    ))}
+                </div>
+            </div>
+            <p className="text-center mt-md text-muted italic">{results.length} pins dropped</p>
         </div>
     );
 }

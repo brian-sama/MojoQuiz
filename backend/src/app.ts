@@ -20,6 +20,7 @@ import {
 } from './utils/helpers.js';
 
 import db from './services/database.js';
+import { aiService } from './services/aiService.js';
 
 dotenv.config();
 
@@ -255,6 +256,34 @@ app.post('/api/sessions/:sessionId/questions', async (req: Request, res: Respons
     } catch (error) {
         console.error('Error creating question:', error);
         res.status(500).json({ error: 'Failed to create question' });
+    }
+});
+
+/**
+ * AI Question Extractor
+ * POST /api/sessions/:sessionId/extract-questions
+ */
+app.post('/api/sessions/:sessionId/extract-questions', async (req: Request, res: Response) => {
+    try {
+        const { sessionId } = req.params;
+        const { sourceText } = req.body;
+
+        if (!sourceText || sourceText.trim().length < 50) {
+            return res.status(400).json({ error: 'Source text too short. Please provide more context (min 50 chars).' });
+        }
+
+        const session = await db.getSessionById(sessionId);
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        const questions = await aiService.generateQuestions(sourceText, session.mode);
+
+        res.json({ questions });
+
+    } catch (error: any) {
+        console.error('Error in AI extraction:', error);
+        res.status(500).json({ error: error.message || 'Failed to extract questions' });
     }
 });
 

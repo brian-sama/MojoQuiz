@@ -81,6 +81,13 @@ export const api = {
         });
     },
 
+    async extractQuestions(sessionId: string, sourceText: string) {
+        return this.request(`sessions/${sessionId}/extract-questions`, {
+            method: 'POST',
+            body: JSON.stringify({ sourceText }),
+        });
+    },
+
     // Results
     async submitResponse(_data: any) {
         // New backend handles responses via Socket.IO

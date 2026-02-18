@@ -28,6 +28,8 @@ export type QuestionType =
     | 'word_cloud'
     | 'open_ended'
     | 'scale'
+    | 'ranking'
+    | 'pin_image'
     | 'quiz_mc'
     | 'quiz_tf'
     | 'quiz_order'
