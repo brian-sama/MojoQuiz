@@ -452,6 +452,7 @@ function HostSession() {
                         </div>
                     </div>
                 </div>
+            )}
             {/* QR Code Modal */}
             {showQRCode && (
                 <div className="modal-overlay" onClick={() => setShowQRCode(false)}>
