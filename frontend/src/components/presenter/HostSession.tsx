@@ -500,9 +500,9 @@ function PollResultsDisplay({ results, options }: { results: PollResults; option
                             <div
                                 className="progress-bar-fill"
                                 style={{
-                                    width: `${percentage}%`,
-                                    background: colors[index % colors.length],
-                                }}
+                                    '--progress-width': `${percentage}%`,
+                                    '--progress-color': colors[index % colors.length],
+                                } as React.CSSProperties}
                             />
                         </div>
                     </div>
@@ -527,10 +527,10 @@ function WordCloudDisplay({ words }: { words: WordCloudWord[] }) {
                         key={`${word.word}-${index}`}
                         className="word-cloud-word"
                         style={{
-                            fontSize: `${size}rem`,
-                            fontWeight: word.weight >= maxWeight / 2 ? 700 : 500,
-                            color: colors[index % colors.length],
-                        }}
+                            '--word-size': `${size}rem`,
+                            '--word-weight': word.weight >= maxWeight / 2 ? 700 : 500,
+                            '--word-color': colors[index % colors.length],
+                        } as React.CSSProperties}
                     >
                         {word.word}
                     </span>

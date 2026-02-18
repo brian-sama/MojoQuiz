@@ -343,7 +343,8 @@ h4 {
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+  width: var(--progress-width, 0%);
+  background: var(--progress-color, linear-gradient(90deg, var(--color-primary), var(--color-secondary)));
   border-radius: var(--radius-full);
   transition: width 0.3s ease;
 }
@@ -726,6 +727,9 @@ h4 {
 
 .word-cloud-word {
   padding: 0.25rem 0.5rem;
+  font-size: var(--word-size, 1rem);
+  font-weight: var(--word-weight, 500);
+  color: var(--word-color, var(--color-text));
 }
 
 /* Responsive */
@@ -788,7 +792,7 @@ h4 {
 /* Glass utility */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
 }
