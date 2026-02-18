@@ -44,6 +44,8 @@ export type QuestionType =
     | 'word_cloud'     // Word cloud
     | 'open_ended'     // Text response
     | 'scale'          // Slider/rating
+    | 'ranking'        // Reordering items
+    | 'pin_image'      // Drop pin on image
     | 'quiz_mc'        // Quiz multiple choice
     | 'quiz_tf'        // True/False
     | 'quiz_order'     // Ordering
@@ -87,6 +89,12 @@ export interface QuestionSettings {
     // Word cloud settings
     max_words?: number;
 
+    // Ranking settings
+    max_ranking_items?: number;
+
+    // Pin on Image settings
+    background_image_url?: string;
+
     // Quiz settings
     points?: number;
     tolerance?: number; // For slider estimation
@@ -108,6 +116,8 @@ export interface Response {
 export type ResponseData =
     | { type: 'poll'; option_index: number | number[] }
     | { type: 'scale'; value: number }
+    | { type: 'ranking'; ranking: { index: string; rank: number }[] }
+    | { type: 'pin_image'; x: number; y: number }
     | { type: 'quiz_mc'; option_index: number }
     | { type: 'quiz_tf'; answer: boolean }
     | { type: 'quiz_order'; order: number[] }

@@ -542,10 +542,13 @@ export default {
 
   // Response
   // Result Utilities
+  getResponseCount,
   getPollResults,
   getScaleStatistics,
   getRankingResults,
   getPinImageResults,
+
+  submitResponse,
 
   // Word Cloud
   submitWords,
