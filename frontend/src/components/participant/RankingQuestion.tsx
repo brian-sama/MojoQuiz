@@ -110,26 +110,24 @@ function SortableItem({ id, text, disabled }: { id: string; text: string; disabl
         isDragging
     } = useSortable({ id, disabled });
 
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        return(
+    return (
         <div
-            ref = { setNodeRef }
-            style = {{
+            ref={setNodeRef}
+            // eslint-disable-next-line
+            style={{
                 '--item-transform': CSS.Transform.toString(transform),
-        '--item-transition': transition,
-        '--item-z-index': isDragging ? 10 : 1,
-        '--item-opacity': isDragging ? 0.8 : 1,
-    } as React.CSSProperties
-}
-{...attributes }
-{...listeners }
-className = {`option-btn sortable-item ${isDragging ? 'dragging' : ''}`}
+                '--item-transition': transition,
+                '--item-z-index': isDragging ? 10 : 1,
+                '--item-opacity': isDragging ? 0.8 : 1,
+            } as React.CSSProperties}
+            {...attributes}
+            {...listeners}
+            className={`option-btn sortable-item ${isDragging ? 'dragging' : ''}`}
         >
-    <div className="flex items-center gap-md w-full">
-        <span className="text-muted">⠿</span>
-        <span className="flex-1">{text}</span>
-    </div>
-        </div >
+            <div className="flex items-center gap-md w-full">
+                <span className="text-muted">⠿</span>
+                <span className="flex-1">{text}</span>
+            </div>
+        </div>
     );
 }
