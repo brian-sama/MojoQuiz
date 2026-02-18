@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useSocket from '../../hooks/useSocket';
 import { api } from '../../hooks/useApi';
+import { QRCodeSVG } from 'qrcode.react';
 import type { Question, PollResults, WordCloudWord } from '../../types';
 
 interface Session {
@@ -31,6 +32,7 @@ function HostSession() {
     const [results, setResults] = useState<PollResults | WordCloudWord[] | null>(null);
     const [responseCount, setResponseCount] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [showQRCode, setShowQRCode] = useState(false);
 
     // Question builder state
     const [showBuilder, setShowBuilder] = useState(false);
@@ -225,7 +227,21 @@ function HostSession() {
                 <div>
                     <h1 className="host-title">{session?.title}</h1>
                     <div className="host-meta">
-                        <span className="text-muted">Code: <strong className="join-code">{session?.join_code}</strong></span>
+                        <span className="text-muted flex items-center gap-sm">
+                            Code: <strong className="join-code">{session?.join_code}</strong>
+                            <button
+                                className="btn-qr-trigger"
+                                onClick={() => setShowQRCode(true)}
+                                title="Show Join QR Code"
+                            >
+                                <QRCodeSVG
+                                    value={`${window.location.origin}/join/${session?.join_code}`}
+                                    size={24}
+                                    level="L"
+                                    includeMargin={false}
+                                />
+                            </button>
+                        </span>
                         <span className="text-muted">👥 {participantCount} online</span>
                     </div>
                 </div>
@@ -434,6 +450,27 @@ function HostSession() {
                                 Add Question
                             </button>
                         </div>
+                    </div>
+                </div>
+            {/* QR Code Modal */}
+            {showQRCode && (
+                <div className="modal-overlay" onClick={() => setShowQRCode(false)}>
+                    <div className="card modal-content qr-modal text-center" onClick={e => e.stopPropagation()}>
+                        <h2 className="mb-lg">Join the Session</h2>
+                        <div className="qr-container mb-lg">
+                            <QRCodeSVG
+                                value={`${window.location.origin}/join/${session?.join_code}`}
+                                size={300}
+                                level="M"
+                                includeMargin={true}
+                                className="qr-svg"
+                            />
+                        </div>
+                        <p className="text-xl mb-sm">Scan to join</p>
+                        <p className="text-muted mb-xl">or enter code: <strong className="text-primary">{session?.join_code}</strong></p>
+                        <button className="btn btn-primary btn-block" onClick={() => setShowQRCode(false)}>
+                            Close
+                        </button>
                     </div>
                 </div>
             )}

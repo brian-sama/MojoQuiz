@@ -706,3 +706,49 @@ h4 {
     max-height: 200px;
   }
 }
+
+/* QR Code Display */
+.btn-qr-trigger {
+  padding: 4px;
+  background: white;
+  border: 1px solid var(--color-bg-hover);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-normal);
+}
+
+.btn-qr-trigger:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary);
+}
+
+.qr-modal {
+  max-width: 400px;
+}
+
+.qr-container {
+  background: white;
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  display: inline-flex;
+  margin: 0 auto;
+}
+
+.qr-svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.text-xl {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.text-primary {
+  color: var(--color-primary);
+}

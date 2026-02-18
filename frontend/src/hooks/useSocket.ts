@@ -6,7 +6,14 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const getSocketUrl = () => {
+    const url = import.meta.env.VITE_API_URL || '';
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/')) return window.location.origin;
+    return 'http://localhost:3001';
+};
+
+const SOCKET_URL = getSocketUrl();
 
 interface UseSocketOptions {
     autoConnect?: boolean;
@@ -25,6 +32,7 @@ export function useSocket(options: UseSocketOptions = {}) {
         const socket = io(SOCKET_URL, {
             withCredentials: true,
             transports: ['websocket', 'polling'],
+            path: '/socket.io/'
         });
 
         socketRef.current = socket;

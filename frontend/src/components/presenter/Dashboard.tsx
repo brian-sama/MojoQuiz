@@ -34,7 +34,7 @@ function PresenterDashboard() {
             localStorage.setItem('currentSession', JSON.stringify(data));
 
             // Navigate to host session view
-            navigate(`/host/${data.id}`);
+            navigate(`/host/${data.sessionId}`);
 
         } catch (err: any) {
             setError(err.message || 'Failed to create session');
