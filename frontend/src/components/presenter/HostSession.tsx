@@ -38,12 +38,14 @@ function HostSession() {
     // Question builder state
     const [showBuilder, setShowBuilder] = useState(false);
     const [newQuestion, setNewQuestion] = useState({
-        type: 'poll',
+        type: 'poll', // Will be reset on session load
         text: '',
         options: ['', '', '', ''],
         timeLimit: 30,
         correctOption: 0,
     });
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [showLeaderboard, setShowLeaderboard] = useState(false);
 
     // Load session data
     useEffect(() => {
@@ -61,6 +63,11 @@ function HostSession() {
                 mode: data.session.mode,
                 status: data.session.status,
             });
+
+            // Set default type based on mode
+            const defaultType = data.session.mode === 'quiz' ? 'quiz_mc' : 'poll';
+            setNewQuestion(prev => ({ ...prev, type: defaultType }));
+
             setQuestions((data.questions || []).map(transformQuestion));
             setParticipantCount(data.participantCount || 0);
 
@@ -133,6 +140,10 @@ function HostSession() {
             setResponseCount(data.response_count);
         });
 
+        on('leaderboard_updated', (data: any) => {
+            setLeaderboard(data.leaderboard);
+        });
+
         on('question_activated', (data: any) => {
             setResponseCount(data.response_count || 0);
             setResults(null);
@@ -159,33 +170,44 @@ function HostSession() {
             off('results_updated');
             off('word_cloud_updated');
             off('text_response_received');
+            off('leaderboard_updated');
             off('question_activated');
             off('question_locked');
             off('results_revealed');
         };
     }, [sessionId, isConnected, on, off, emit, activeQuestion]);
 
-    // Create a new question
-    const handleCreateQuestion = async () => {
+    // Create new question
+    const handleCreateQuestion = async (shouldClose = true) => {
         if (!newQuestion.text.trim()) return;
 
         try {
+            const optionsArray = (newQuestion.type === 'poll' || newQuestion.type === 'quiz_mc')
+                ? newQuestion.options.filter(o => o.trim()).map(o => ({ text: o }))
+                : null;
+
             await api.createQuestion(sessionId!, {
                 questionType: newQuestion.type,
                 questionText: newQuestion.text,
-                options: newQuestion.options.filter(o => o.trim()).map((text, i) => ({
-                    id: `opt_${i}`,
-                    text,
-                    is_correct: newQuestion.type === 'quiz_mc' && i === newQuestion.correctOption,
-                })),
-                settings: {
-                    time_limit: newQuestion.type.startsWith('quiz_') ? newQuestion.timeLimit : null,
-                },
+                options: optionsArray,
+                correctAnswer: newQuestion.type.startsWith('quiz_') ? newQuestion.correctOption : undefined,
+                timeLimit: newQuestion.type.startsWith('quiz_') ? newQuestion.timeLimit : undefined,
             });
 
-            setShowBuilder(false);
-            setNewQuestion({ type: 'poll', text: '', options: ['', '', '', ''], timeLimit: 30, correctOption: 0 });
-            loadSession(); // Refresh questions
+            // Reset builder
+            const defaultType = session?.mode === 'quiz' ? 'quiz_mc' : 'poll';
+            setNewQuestion({
+                type: defaultType,
+                text: '',
+                options: ['', '', '', ''],
+                timeLimit: 30,
+                correctOption: 0,
+            });
+
+            if (shouldClose) {
+                setShowBuilder(false);
+            }
+            loadSession();
         } catch (err) {
             console.error('Failed to create question:', err);
         }
@@ -255,6 +277,11 @@ function HostSession() {
                     <button className="btn btn-secondary" onClick={() => setIsPresentationMode(!isPresentationMode)}>
                         {isPresentationMode ? 'Exit Presentation' : 'Presentation Mode'}
                     </button>
+                    {session?.mode === 'quiz' && (
+                        <button className="btn btn-secondary" onClick={() => setShowLeaderboard(!showLeaderboard)}>
+                            {showLeaderboard ? 'Back to Question' : 'Leaderboard'}
+                        </button>
+                    )}
                     {!isPresentationMode && (
                         <>
                             <button className="btn btn-secondary" onClick={() => setShowBuilder(true)}>
@@ -308,26 +335,32 @@ function HostSession() {
                     ) : (
                         <>
                             <div className="display-content">
-                                <h2 className="display-question">
-                                    {activeQuestion.question_text}
-                                </h2>
+                                {showLeaderboard ? (
+                                    <LeaderboardDisplay leaderboard={leaderboard} />
+                                ) : (
+                                    <>
+                                        <h2 className="display-question">
+                                            {activeQuestion.question_text}
+                                        </h2>
 
-                                {/* Response count */}
-                                <div className="text-center mb-lg">
-                                    <span className="response-count">{responseCount}</span>
-                                    <p className="text-muted">responses</p>
-                                </div>
+                                        {/* Response count */}
+                                        <div className="text-center mb-lg">
+                                            <span className="response-count">{responseCount}</span>
+                                            <p className="text-muted">responses</p>
+                                        </div>
 
-                                {/* Results display */}
-                                {results && activeQuestion.question_type === 'poll' && (
-                                    <PollResultsDisplay
-                                        results={results as PollResults}
-                                        options={activeQuestion.options || []}
-                                    />
-                                )}
+                                        {/* Results display */}
+                                        {results && activeQuestion.question_type === 'poll' && (
+                                            <PollResultsDisplay
+                                                results={results as PollResults}
+                                                options={activeQuestion.options || []}
+                                            />
+                                        )}
 
-                                {results && activeQuestion.question_type === 'word_cloud' && (
-                                    <WordCloudDisplay words={results as WordCloudWord[]} />
+                                        {results && activeQuestion.question_type === 'word_cloud' && (
+                                            <WordCloudDisplay words={results as WordCloudWord[]} />
+                                        )}
+                                    </>
                                 )}
                             </div>
 
@@ -365,11 +398,18 @@ function HostSession() {
                                 onChange={(e) => setNewQuestion({ ...newQuestion, type: e.target.value })}
                                 aria-label="Question type"
                             >
-                                <option value="poll">Poll</option>
-                                <option value="word_cloud">Word Cloud</option>
-                                <option value="scale">Scale</option>
-                                <option value="quiz_mc">Quiz - Multiple Choice</option>
-                                <option value="quiz_tf">Quiz - True/False</option>
+                                {session?.mode === 'quiz' ? (
+                                    <>
+                                        <option value="quiz_mc">Quiz - Multiple Choice</option>
+                                        <option value="quiz_tf">Quiz - True/False</option>
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="poll">Poll</option>
+                                        <option value="word_cloud">Word Cloud</option>
+                                        <option value="scale">Scale</option>
+                                    </>
+                                )}
                             </select>
                         </div>
 
@@ -459,10 +499,13 @@ function HostSession() {
                         )}
 
                         <div className="modal-actions">
-                            <button className="btn btn-secondary flex-1" onClick={() => setShowBuilder(false)}>
+                            <button className="btn btn-secondary" onClick={() => setShowBuilder(false)}>
                                 Cancel
                             </button>
-                            <button className="btn btn-primary flex-1" onClick={handleCreateQuestion}>
+                            <button className="btn btn-secondary" onClick={() => handleCreateQuestion(false)}>
+                                Save & Add Another
+                            </button>
+                            <button className="btn btn-primary" onClick={() => handleCreateQuestion(true)}>
                                 Add Question
                             </button>
                         </div>
@@ -491,6 +534,33 @@ function HostSession() {
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// Leaderboard Display
+function LeaderboardDisplay({ leaderboard }: { leaderboard: LeaderboardEntry[] }) {
+    if (leaderboard.length === 0) {
+        return (
+            <div className="text-center py-2xl">
+                <h3>No players yet</h3>
+                <p className="text-muted">Players will appear here once the first question is graded.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="leaderboard-container">
+            <h2 className="mb-xl">Top Players</h2>
+            <div className="leaderboard-list">
+                {leaderboard.map((entry, index) => (
+                    <div key={entry.participant_id} className={`leaderboard-item rank-${entry.rank}`}>
+                        <div className="leaderboard-rank">{entry.rank}</div>
+                        <div className="leaderboard-name">{entry.nickname || 'Anonymous'}</div>
+                        <div className="leaderboard-score">{entry.total_score} pts</div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

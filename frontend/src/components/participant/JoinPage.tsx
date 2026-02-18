@@ -180,12 +180,12 @@ function JoinPage() {
                 )}
 
                 <div className="text-center mt-xl">
-                    <a
-                        href="/host"
-                        className="text-muted link-underline"
+                    <button
+                        onClick={() => window.location.href = '/host'}
+                        className="btn btn-secondary"
                     >
-                        Create a session →
-                    </a>
+                        Create a session
+                    </button>
                 </div>
             </div>
         </div>

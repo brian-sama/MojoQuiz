@@ -110,12 +110,12 @@ function PresenterDashboard() {
                 </form>
 
                 <div className="text-center mt-xl">
-                    <a
-                        href="/"
-                        className="text-muted link-underline"
+                    <button
+                        onClick={() => window.location.href = '/'}
+                        className="btn btn-secondary"
                     >
-                        ← Join as participant
-                    </a>
+                        Join as participant
+                    </button>
                 </div>
             </div>
         </div>
