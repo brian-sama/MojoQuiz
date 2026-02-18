@@ -787,8 +787,8 @@ function RankingResultsDisplay({ results, options }: { results: { [key: string]:
                             <div
                                 className="ranking-bar-fill"
                                 style={{
-                                    width: `${avgRank > 0 ? (1 / avgRank) * 100 : 0}%`,
-                                    background: `var(--color-option-${(options.indexOf(opt) % 4) + 1})`
+                                    '--ranking-width': `${avgRank > 0 ? (1 / avgRank) * 100 : 0}%`,
+                                    '--ranking-color': `var(--color-option-${(options.indexOf(opt) % 4) + 1})`
                                 } as React.CSSProperties}
                             />
                         </div>
@@ -811,9 +811,8 @@ function PinImageResultsDisplay({ results, imageUrl }: { results: { x: number, y
                             key={i}
                             className="pin-marker fade-in"
                             style={{
-                                left: `${pin.x}%`,
-                                top: `${pin.y}%`,
-                                transform: 'translate(-50%, -50%)'
+                                '--pin-left': `${pin.x}%`,
+                                '--pin-top': `${pin.y}%`
                             } as React.CSSProperties}
                         />
                     ))}
