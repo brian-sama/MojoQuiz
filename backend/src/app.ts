@@ -119,11 +119,17 @@ app.post('/api/sessions', async (req: Request, res: Response) => {
  * Get session info by join code
  * GET /api/sessions/:joinCode
  */
-app.get('/api/sessions/:joinCode', async (req: Request, res: Response) => {
+app.get('/api/sessions/:idOrCode', async (req: Request, res: Response) => {
     try {
-        const { joinCode } = req.params;
+        const { idOrCode } = req.params;
+        let session;
 
-        const session = await db.getSessionByCode(joinCode.toUpperCase());
+        // UUIDs are 36 chars, join codes are 6 chars.
+        if (idOrCode.length > 10) {
+            session = await db.getSessionById(idOrCode);
+        } else {
+            session = await db.getSessionByCode(idOrCode.toUpperCase());
+        }
 
         if (!session) {
             return res.status(404).json({ error: 'Session not found or ended' });
