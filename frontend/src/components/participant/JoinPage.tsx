@@ -91,7 +91,7 @@ function JoinPage() {
             <div className="container">
                 <div className="text-center mb-lg">
                     <h1 className="app-title">
-                        🎯 Engage
+                        Engage
                     </h1>
                     <p className="text-muted">
                         Join the live session

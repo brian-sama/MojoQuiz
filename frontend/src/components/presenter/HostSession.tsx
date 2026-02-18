@@ -33,6 +33,7 @@ function HostSession() {
     const [responseCount, setResponseCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [showQRCode, setShowQRCode] = useState(false);
+    const [isPresentationMode, setIsPresentationMode] = useState(false);
 
     // Question builder state
     const [showBuilder, setShowBuilder] = useState(false);
@@ -122,9 +123,14 @@ function HostSession() {
         });
 
         on('word_cloud_updated', (data: any) => {
+            setResponseCount(data.response_count);
             if (activeQuestion && activeQuestion.id === data.question_id) {
                 setResults(data.words.map((w: any) => ({ word: w.word, weight: w.count })));
             }
+        });
+
+        on('text_response_received', (data: any) => {
+            setResponseCount(data.response_count);
         });
 
         on('question_activated', (data: any) => {
@@ -152,6 +158,7 @@ function HostSession() {
             off('participant_left');
             off('results_updated');
             off('word_cloud_updated');
+            off('text_response_received');
             off('question_activated');
             off('question_locked');
             off('results_revealed');
@@ -213,7 +220,6 @@ function HostSession() {
         return (
             <div className="page page-centered">
                 <div className="text-center">
-                    <div className="animate-pulse emoji-large">🎯</div>
                     <p className="mt-md">Loading session...</p>
                 </div>
             </div>
@@ -242,51 +248,59 @@ function HostSession() {
                                 />
                             </button>
                         </span>
-                        <span className="text-muted">👥 {participantCount} online</span>
+                        <span className="text-muted">Participants: {participantCount}</span>
                     </div>
                 </div>
                 <div className="host-actions">
-                    <button className="btn btn-secondary" onClick={() => setShowBuilder(true)}>
-                        + Add Question
+                    <button className="btn btn-secondary" onClick={() => setIsPresentationMode(!isPresentationMode)}>
+                        {isPresentationMode ? 'Exit Presentation' : 'Presentation Mode'}
                     </button>
-                    <button className="btn btn-danger" onClick={endSession}>
-                        End Session
-                    </button>
+                    {!isPresentationMode && (
+                        <>
+                            <button className="btn btn-secondary" onClick={() => setShowBuilder(true)}>
+                                Add Question
+                            </button>
+                            <button className="btn btn-danger" onClick={endSession}>
+                                End Session
+                            </button>
+                        </>
+                    )}
                 </div>
             </header>
 
-            <div className="host-content">
+            <div className={`host-content ${isPresentationMode ? 'presentation-active' : ''}`}>
                 {/* Question List */}
-                <aside className="card questions-sidebar">
-                    <h3 className="mb-md">Questions ({questions.length})</h3>
-                    {questions.length === 0 ? (
-                        <p className="text-muted">No questions yet. Add one to get started!</p>
-                    ) : (
-                        <div className="flex flex-col gap-sm">
-                            {questions.map((q, index) => (
-                                <button
-                                    key={q.id}
-                                    onClick={() => activateQuestion(q.id)}
-                                    className={`question-item ${activeQuestion?.id === q.id ? 'question-item-active' : ''}`}
-                                >
-                                    <div className="question-item-type">
-                                        {index + 1}. {q.question_type.toUpperCase()}
-                                    </div>
-                                    <div className="question-item-text">
-                                        {q.question_text.substring(0, 50)}...
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </aside>
+                {!isPresentationMode && (
+                    <aside className="card questions-sidebar">
+                        <h3 className="mb-md">Questions ({questions.length})</h3>
+                        {questions.length === 0 ? (
+                            <p className="text-muted">No questions yet. Add one to get started!</p>
+                        ) : (
+                            <div className="flex flex-col gap-sm">
+                                {questions.map((q, index) => (
+                                    <button
+                                        key={q.id}
+                                        onClick={() => activateQuestion(q.id)}
+                                        className={`question-item ${activeQuestion?.id === q.id ? 'question-item-active' : ''}`}
+                                    >
+                                        <div className="question-item-type">
+                                            {index + 1}. {q.question_type.toUpperCase()}
+                                        </div>
+                                        <div className="question-item-text">
+                                            {q.question_text.substring(0, 50)}...
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </aside>
+                )}
 
                 {/* Main Display Area */}
-                <main className="card display-main">
+                <main className={`card display-main ${isPresentationMode ? 'presentation-main' : ''}`}>
                     {!activeQuestion ? (
                         <div className="display-empty">
                             <div>
-                                <p className="emoji-xlarge">📊</p>
                                 <h2 className="mt-md">Select a question to display</h2>
                                 <p className="text-muted mt-sm">Or add a new question to get started</p>
                             </div>
@@ -318,17 +332,19 @@ function HostSession() {
                             </div>
 
                             {/* Controls */}
-                            <div className="display-controls">
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => toggleLock(!activeQuestion.is_locked)}
-                                >
-                                    {activeQuestion.is_locked ? '🔓 Unlock Voting' : '🔒 Lock Voting'}
-                                </button>
-                                <button className="btn btn-primary" onClick={revealResults}>
-                                    📊 Show Results
-                                </button>
-                            </div>
+                            {!isPresentationMode && (
+                                <div className="display-controls">
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => toggleLock(!activeQuestion.is_locked)}
+                                    >
+                                        {activeQuestion.is_locked ? 'Unlock Voting' : 'Lock Voting'}
+                                    </button>
+                                    <button className="btn btn-primary" onClick={revealResults}>
+                                        Show Results
+                                    </button>
+                                </div>
+                            )}
                         </>
                     )}
                 </main>

@@ -48,7 +48,7 @@ function PresenterDashboard() {
             <div className="container container-sm">
                 <div className="text-center mb-xl">
                     <h1 className="app-title">
-                        🎯 Create Session
+                        Create Session
                     </h1>
                     <p className="text-muted">
                         Start a live engagement session for your audience
@@ -80,14 +80,14 @@ function PresenterDashboard() {
                             <ModeButton
                                 selected={mode === 'mentimeter'}
                                 onClick={() => setMode('mentimeter')}
-                                icon="📊"
+                                icon=""
                                 label="Engagement"
                                 description="Polls, Word Clouds, Scale"
                             />
                             <ModeButton
                                 selected={mode === 'kahoot'}
                                 onClick={() => setMode('kahoot')}
-                                icon="🏆"
+                                icon=""
                                 label="Quiz"
                                 description="Timed Questions, Leaderboard"
                             />

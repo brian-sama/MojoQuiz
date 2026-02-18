@@ -344,9 +344,11 @@ export function initializeSocketHandlers(io: Server): void {
 
                 // Send updated word cloud to presenter
                 const wordCloud = await db.getWordCloudData(question_id);
+                const responseCount = await db.getResponseCount(question_id);
                 io.to(`presenter:${socketData.sessionId}`).emit('word_cloud_updated', {
                     question_id,
                     words: wordCloud,
+                    response_count: responseCount,
                 });
 
             } catch (error) {
@@ -392,9 +394,11 @@ export function initializeSocketHandlers(io: Server): void {
                 socket.emit('text_submitted', { success: true, question_id });
 
                 // Notify presenter of new pending response
+                const responseCount = await db.getResponseCount(question_id);
                 io.to(`presenter:${socketData.sessionId}`).emit('text_response_received', {
                     question_id,
                     response: result.response,
+                    response_count: responseCount,
                 });
 
             } catch (error) {
