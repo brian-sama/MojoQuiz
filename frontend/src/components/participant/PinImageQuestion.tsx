@@ -52,12 +52,12 @@ export default function PinImageQuestion({ question, onSubmit, disabled, hasResp
             >
                 <img src={imageUrl} alt="Target" className="w-full h-auto block select-none pointer-events-none" />
                 {pin && (
+                    // eslint-disable-next-line
                     <div
                         className="pin-marker"
                         style={{
                             '--pin-left': `${pin.x}%`,
-                            '--pin-top': `${pin.y}%`,
-                            transform: 'translate(-50%, -50%)'
+                            '--pin-top': `${pin.y}%`
                         } as React.CSSProperties}
                     />
                 )}

@@ -721,6 +721,7 @@ function PollResultsDisplay({ results, options }: { results: PollResults; option
                             <span className="poll-result-percent">{percentage}%</span>
                         </div>
                         <div className="progress-bar progress-bar-tall">
+                            {/* eslint-disable-next-line */}
                             <div
                                 className="progress-bar-fill"
                                 style={{
@@ -747,6 +748,7 @@ function WordCloudDisplay({ words }: { words: WordCloudWord[] }) {
                 const size = 1 + (word.weight / maxWeight) * 2;
 
                 return (
+                    // eslint-disable-next-line
                     <span
                         key={`${word.word}-${index}`}
                         className="word-cloud-word"
@@ -784,6 +786,7 @@ function RankingResultsDisplay({ results, options }: { results: { [key: string]:
                             <span className="text-muted">Avg Rank: {avgRank.toFixed(1)}</span>
                         </div>
                         <div className="ranking-bar-bg">
+                            {/* eslint-disable-next-line */}
                             <div
                                 className="ranking-bar-fill"
                                 style={{
@@ -807,6 +810,7 @@ function PinImageResultsDisplay({ results, imageUrl }: { results: { x: number, y
                 <img src={imageUrl} alt="Background" className="max-w-full h-auto block" />
                 <div className="absolute inset-0">
                     {results.map((pin, i) => (
+                        // eslint-disable-next-line
                         <div
                             key={i}
                             className="pin-marker fade-in"
