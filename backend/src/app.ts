@@ -144,6 +144,7 @@ app.get('/api/sessions/:idOrCode', async (req: Request, res: Response) => {
         res.json({
             session: {
                 id: session.id,
+                join_code: session.join_code,
                 title: session.title,
                 mode: session.mode,
                 status: session.status,
