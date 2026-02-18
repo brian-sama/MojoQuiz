@@ -9,7 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import useSocket from '../../hooks/useSocket';
 import { api } from '../../hooks/useApi';
 import { QRCodeSVG } from 'qrcode.react';
-import type { Question, PollResults, WordCloudWord } from '../../types';
+import type { Question, PollResults, WordCloudWord, LeaderboardEntry, QuestionOption } from '../../types';
 
 interface Session {
     id: string;
@@ -29,7 +29,7 @@ function HostSession() {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
     const [participantCount, setParticipantCount] = useState(0);
-    const [results, setResults] = useState<PollResults | WordCloudWord[] | null>(null);
+    const [results, setResults] = useState<PollResults | WordCloudWord[] | { x: number; y: number }[] | null>(null);
     const [responseCount, setResponseCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [showQRCode, setShowQRCode] = useState(false);
@@ -419,7 +419,7 @@ function HostSession() {
 
                                         {results && activeQuestion.question_type === 'pin_image' && (
                                             <PinImageResultsDisplay
-                                                results={results as { x: number, y: number }[]}
+                                                results={results as unknown as { x: number, y: number }[]}
                                                 imageUrl={activeQuestion.options?.[0]?.text || ''}
                                             />
                                         )}
@@ -691,7 +691,7 @@ function LeaderboardDisplay({ leaderboard }: { leaderboard: LeaderboardEntry[] }
         <div className="leaderboard-container">
             <h2 className="mb-xl">Top Players</h2>
             <div className="leaderboard-list">
-                {leaderboard.map((entry, index) => (
+                {leaderboard.map((entry) => (
                     <div key={entry.participant_id} className={`leaderboard-item rank-${entry.rank}`}>
                         <div className="leaderboard-rank">{entry.rank}</div>
                         <div className="leaderboard-name">{entry.nickname || 'Anonymous'}</div>
