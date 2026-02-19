@@ -221,8 +221,14 @@ const LoginPage: React.FC = () => {
                                 className="btn-premium"
                                 disabled={loading || !email}
                             >
-                                {loading ? 'Processing...' : 'Continue'}
+                                {loading ? 'Continue' : 'Continue'}
                             </button>
+
+                            <div className="text-center mt-lg">
+                                <p className="text-sm text-secondary">
+                                    Don't have an account? <Link to="/register/auth" className="link font-bold">Sign up</Link>
+                                </p>
+                            </div>
 
                             <div className="social-divider">
                                 <span>Or continue with</span>

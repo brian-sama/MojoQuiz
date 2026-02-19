@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../hooks/useApi';
+import { motion, AnimatePresence } from 'framer-motion';
+import BouncingBackground from '../../components/common/BouncingBackground';
 
 const RegisterPage: React.FC = () => {
-    const [step, setStep] = useState<1 | 2>(1); // 1: Email, 2: Verification + Password
+    const [step, setStep] = useState<1 | 2>(1); // 1: Info, 2: Verification + Password
     const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
     const [password, setPassword] = useState('');
@@ -24,7 +26,7 @@ const RegisterPage: React.FC = () => {
             await api.post('/auth/register', { email });
             setStep(2);
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to send verification code.');
+            setError(err.message || 'Failed to send verification code.');
         } finally {
             setLoading(false);
         }
@@ -42,115 +44,165 @@ const RegisterPage: React.FC = () => {
                 password,
                 displayName
             });
-            login(response.data.token, response.data.user);
-            navigate('/dashboard');
+            login(response.token, response.user);
+            navigate('/host');
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to verify code and register.');
+            setError(err.message || 'Failed to verify code and register.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="auth-container">
-            <div className="auth-card">
-                <div className="auth-header">
-                    <h1 className="logo-text text-xl mb-sm">MojoQuiz</h1>
-                    <p className="text-secondary">
-                        {step === 1 ? 'Join the world-class engagement platform.' : 'Verify your email to continue.'}
-                    </p>
-                </div>
+        <div className="auth-page-wrapper">
+            <BouncingBackground />
 
-                {error && <div className="alert alert-error mb-md">{error}</div>}
+            <div className="auth-container-premium">
+                <motion.div
+                    className="auth-card-premium"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <div className="auth-header-premium">
+                        <h1 className="logo-title">MojoQuiz</h1>
+                        <p className="auth-subtitle">
+                            {step === 1 ? 'Join the world-class engagement platform' : 'Verify your email to continue'}
+                        </p>
+                    </div>
 
-                {step === 1 ? (
-                    <form onSubmit={handleSendOTP}>
-                        <div className="form-group mb-lg">
-                            <label className="form-label">Email Address</label>
-                            <input
-                                type="email"
-                                className="form-control"
-                                placeholder="you@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary w-full py-md mb-md"
-                            disabled={loading}
-                        >
-                            {loading ? 'Sending Code...' : 'Get Verification Code'}
-                        </button>
-                    </form>
-                ) : (
-                    <form onSubmit={handleVerifyAndRegister}>
-                        <div className="form-group mb-md text-center">
-                            <p className="text-sm mb-xs">We sent a 6-digit code to</p>
-                            <p className="font-bold mb-md">{email}</p>
-                            <button
-                                type="button"
-                                className="link text-xs"
-                                onClick={() => setStep(1)}
+                    <AnimatePresence mode="wait">
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="error-banner mb-lg"
                             >
-                                Change email
-                            </button>
-                        </div>
+                                {error}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                        <div className="form-group mb-md">
-                            <label className="form-label">Verification Code</label>
-                            <input
-                                type="text"
-                                className="form-control text-center text-xl font-bold tracking-widest"
-                                maxLength={6}
-                                placeholder="000000"
-                                value={code}
-                                onChange={(e) => setCode(e.target.value)}
-                                required
-                            />
-                        </div>
+                    <AnimatePresence mode="wait">
+                        {step === 1 ? (
+                            <motion.form
+                                key="step1"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                onSubmit={handleSendOTP}
+                                className="form-step-container"
+                            >
+                                <div className="form-group-premium">
+                                    <input
+                                        id="reg-name"
+                                        type="text"
+                                        className="form-input-premium"
+                                        placeholder=" "
+                                        value={displayName}
+                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        required
+                                        autoFocus
+                                    />
+                                    <label htmlFor="reg-name" className="form-label-premium">Full Name</label>
+                                </div>
 
-                        <div className="form-group mb-md">
-                            <label className="form-label">Full Name</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                placeholder="John Doe"
-                                value={displayName}
-                                onChange={(e) => setDisplayName(e.target.value)}
-                                required
-                            />
-                        </div>
+                                <div className="form-group-premium">
+                                    <input
+                                        id="reg-email"
+                                        type="email"
+                                        className="form-input-premium"
+                                        placeholder=" "
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                    <label htmlFor="reg-email" className="form-label-premium">Email Address</label>
+                                </div>
 
-                        <div className="form-group mb-lg">
-                            <label className="form-label">Choose Password</label>
-                            <input
-                                type="password"
-                                className="form-control"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
-                        </div>
+                                <button
+                                    type="submit"
+                                    className="btn-premium"
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Sending Code...' : 'Get Started'}
+                                </button>
+                            </motion.form>
+                        ) : (
+                            <motion.form
+                                key="step2"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                onSubmit={handleVerifyAndRegister}
+                                className="form-step-container"
+                            >
+                                <div className="text-center mb-lg">
+                                    <p className="text-sm text-secondary mb-xs">We sent a 6-digit code to</p>
+                                    <div className="flex items-center justify-center gap-sm">
+                                        <span className="text-primary font-bold">{email}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep(1)}
+                                            className="btn-change-email"
+                                        >
+                                            Change
+                                        </button>
+                                    </div>
+                                </div>
 
-                        <button
-                            type="submit"
-                            className="btn btn-primary w-full py-md mb-md"
-                            disabled={loading}
-                        >
-                            {loading ? 'Verifying...' : 'Complete Sign Up'}
-                        </button>
-                    </form>
-                )}
+                                <div className="form-group-premium">
+                                    <input
+                                        id="reg-code"
+                                        type="text"
+                                        className="form-input-premium text-center tracking-widest font-bold"
+                                        maxLength={6}
+                                        placeholder=" "
+                                        value={code}
+                                        onChange={(e) => setCode(e.target.value)}
+                                        required
+                                        autoFocus
+                                    />
+                                    <label htmlFor="reg-code" className="form-label-premium">Verification Code</label>
+                                </div>
 
-                <div className="auth-footer text-center mt-lg">
-                    <p className="text-secondary text-sm">
-                        Already have an account? <Link to="/login/auth" className="link font-bold">Login</Link>
-                    </p>
-                </div>
+                                <div className="form-group-premium">
+                                    <input
+                                        id="reg-pass"
+                                        type="password"
+                                        className="form-input-premium"
+                                        placeholder=" "
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
+                                    <label htmlFor="reg-pass" className="form-label-premium">Choose Password</label>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="btn-premium"
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Finalizing...' : 'Complete Account'}
+                                </button>
+                            </motion.form>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="text-center mt-xl">
+                        <p className="text-secondary text-sm">
+                            Already have an account? <Link to="/login/auth" className="link font-bold">Sign in</Link>
+                        </p>
+                    </div>
+
+                    <div className="mt-xl pt-lg border-t border-white/10 text-center">
+                        <p className="text-xs text-secondary opacity-60">
+                            By signing up, you agree to our Terms and Privacy Policy.
+                        </p>
+                    </div>
+                </motion.div>
             </div>
         </div>
     );
