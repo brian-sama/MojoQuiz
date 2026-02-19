@@ -15,8 +15,9 @@ export interface AuthRequest extends Request {
  * Auth Middleware
  * Verifies JWT and attaches user to request
  */
-export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+    const authReq = req as AuthRequest;
+    const authHeader = authReq.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Access denied. No token provided.' });
@@ -32,7 +33,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
             return res.status(401).json({ error: 'Invalid token. User not found.' });
         }
 
-        req.user = { id: user.id, email: user.email };
+        authReq.user = { id: user.id, email: user.email };
         next();
     } catch (error) {
         console.error('Auth middleware error:', error);

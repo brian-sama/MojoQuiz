@@ -794,7 +794,7 @@ async function getSessionReport(sessionId: string): Promise<any> {
 /**
  * Get leaderboard for a session based on scores
  */
-async function getLeaderboard(sessionId: string): Promise<any[]> {
+async function getLeaderboard(sessionId: string, limit: number = 50): Promise<any[]> {
   const rows = await sql`
         SELECT 
             p.id,
@@ -806,7 +806,7 @@ async function getLeaderboard(sessionId: string): Promise<any[]> {
         WHERE p.session_id = ${sessionId}
         GROUP BY p.id, p.nickname
         ORDER BY total_score DESC
-        LIMIT 50
+        LIMIT ${limit}
     `;
   return rows;
 }

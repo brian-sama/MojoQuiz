@@ -16,6 +16,8 @@ Navigate to the project directory and pull the changes from GitHub:
 
 ```bash
 cd MojoQuiz
+# If you have local changes (like lock files) that conflict, run:
+# git stash
 git pull origin main
 ```
 
@@ -37,16 +39,25 @@ npm install
 npm run build
 ```
 
-## 4. Restart Application
+## 4. Run Database Migrations
+
+Apply the new database schema changes (Brainstorming, NPS, Folders):
+
+```bash
+cd ../backend
+# Run the expansion features migration
+npx tsx src/scripts/expandFeatures.ts
+```
+
+## 5. Restart Application
 
 Restart the backend service to apply the changes:
 
 ```bash
-cd ../backend
 pm2 restart mojoquiz-backend
 ```
 
-## 5. Verification
+## 6. Verification
 
 - Visit [https://mojoquiz.co.zw](https://mojoquiz.co.zw)
 - Check that the login page shows "Sign in or create an account"
