@@ -13,7 +13,6 @@ const LoginPage: React.FC = () => {
     const [step, setStep] = useState<AuthStep>('email');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [otpCode, setOtpCode] = useState('');
     const [displayName, setDisplayName] = useState('');
 
     const [error, setError] = useState('');
@@ -71,8 +70,7 @@ const LoginPage: React.FC = () => {
             // or we can catch that specific error to redirect to login.
             try {
                 await api.post('/auth/register', { email });
-                setMessage(`Verification code sent to ${email}`);
-                setStep('verify');
+                setStep('setup');
             } catch (err: any) {
                 if (err.message === 'User already exists') {
                     setStep('login');
@@ -104,16 +102,6 @@ const LoginPage: React.FC = () => {
         }
     };
 
-    // Step 2 (New): Verify OTP
-    const handleVerify = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        if (otpCode.length !== 6) {
-            setError('Please enter a 6-digit code.');
-            return;
-        }
-        setStep('setup');
-    };
 
     // Step 3 (New): Setup Profile
     const handleCompleteRegistration = async (e: React.FormEvent) => {
@@ -122,9 +110,8 @@ const LoginPage: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await api.post('/auth/verify-otp', {
+            const response = await api.post('/auth/register', {
                 email,
-                code: otpCode,
                 password,
                 displayName
             });
@@ -311,49 +298,6 @@ const LoginPage: React.FC = () => {
                         </motion.form>
                     )}
 
-                    {step === 'verify' && (
-                        <motion.form
-                            key="verify-step"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            onSubmit={handleVerify}
-                            className="form-step-container"
-                        >
-                            <p className="text-sm text-center mb-lg">
-                                We sent a 6-digit code to <br />
-                                <strong className="text-primary">{email}</strong>
-                            </p>
-
-                            <div className="form-group-premium">
-                                <input
-                                    id="otp-code"
-                                    type="text"
-                                    className="form-input-premium text-center tracking-widest font-bold"
-                                    placeholder=" "
-                                    title="Enter 6-digit verification code"
-                                    maxLength={6}
-                                    value={otpCode}
-                                    onChange={(e) => setOtpCode(e.target.value)}
-                                    required
-                                    autoFocus
-                                />
-                                <label htmlFor="otp-code" className="form-label-premium">6-Digit Code</label>
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="btn-premium"
-                                disabled={otpCode.length !== 6}
-                            >
-                                Continue
-                            </button>
-
-                            <button type="button" onClick={resetFlow} className="btn-secondary w-full py-xs mt-md text-xs">
-                                Did not get a code?
-                            </button>
-                        </motion.form>
-                    )}
 
                     {step === 'setup' && (
                         <motion.form

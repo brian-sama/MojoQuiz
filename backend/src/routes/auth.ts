@@ -20,13 +20,25 @@ router.post('/register', async (req: Request, res: Response) => {
     try {
         const { email, password, displayName } = req.body;
 
-        if (!email || !password || !displayName) {
-            return res.status(400).json({ error: 'Email, password, and full name are required' });
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
         }
 
         const existingUser = await db.getUserByEmail(email);
+
+        // If user already exists, return "User already exists" error.
+        // This is caught by the frontend to switch to the password step.
         if (existingUser) {
             return res.status(400).json({ error: 'User already exists' });
+        }
+
+        // If it's just an existence check from the login page, return success.
+        // If it's a registration attempt, ensure all fields are present.
+        if (!password || !displayName) {
+            return res.status(200).json({
+                message: 'New user check successful',
+                requiresSetup: true
+            });
         }
 
         // Hash password
@@ -39,7 +51,7 @@ router.post('/register', async (req: Request, res: Response) => {
             password_hash: passwordHash,
             display_name: name,
             auth_provider: 'email',
-            is_verified: true, // Auto-verified since email service is not set up
+            is_verified: true,
             role: 'user'
         });
 
