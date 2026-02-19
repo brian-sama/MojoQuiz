@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -72,94 +72,95 @@ function PresenterDashboard() {
                             </div>
                         )}
                     </div>
+                </div>
 
-                    <form onSubmit={handleCreateSession} className="card">
-                        <div className="mb-lg">
-                            <label htmlFor="session-title" className="form-label">
-                                Session Title
-                            </label>
-                            <input
-                                id="session-title"
-                                type="text"
-                                className="input"
-                                placeholder="e.g., Team Meeting Feedback"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                maxLength={100}
-                                autoFocus
+                <form onSubmit={handleCreateSession} className="card">
+                    <div className="mb-lg">
+                        <label htmlFor="session-title" className="form-label">
+                            Session Title
+                        </label>
+                        <input
+                            id="session-title"
+                            type="text"
+                            className="input"
+                            placeholder="e.g., Team Meeting Feedback"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            maxLength={100}
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className="mb-lg">
+                        <label className="form-label">
+                            Session Mode
+                        </label>
+                        <div className="flex gap-sm flex-wrap">
+                            <ModeButton
+                                selected={mode === 'mentimeter'}
+                                onClick={() => setMode('mentimeter')}
+                                icon=""
+                                label="Engagement"
+                                description="Polls, Word Clouds, Scale"
+                            />
+                            <ModeButton
+                                selected={mode === 'kahoot'}
+                                onClick={() => setMode('kahoot')}
+                                icon=""
+                                label="Quiz"
+                                description="Timed Questions, Leaderboard"
                             />
                         </div>
-
-                        <div className="mb-lg">
-                            <label className="form-label">
-                                Session Mode
-                            </label>
-                            <div className="flex gap-sm flex-wrap">
-                                <ModeButton
-                                    selected={mode === 'mentimeter'}
-                                    onClick={() => setMode('mentimeter')}
-                                    icon=""
-                                    label="Engagement"
-                                    description="Polls, Word Clouds, Scale"
-                                />
-                                <ModeButton
-                                    selected={mode === 'kahoot'}
-                                    onClick={() => setMode('kahoot')}
-                                    icon=""
-                                    label="Quiz"
-                                    description="Timed Questions, Leaderboard"
-                                />
-                            </div>
-                        </div>
-
-                        {error && (
-                            <p className="error-text text-center mb-md">
-                                {error}
-                            </p>
-                        )}
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-large btn-block"
-                            disabled={loading || !title.trim()}
-                        >
-                            {loading ? 'Creating...' : 'Create Session'}
-                        </button>
-                    </form>
-
-                    <div className="text-center mt-xl">
-                        <button
-                            onClick={() => navigate('/')}
-                            className="btn btn-secondary"
-                        >
-                            Join as participant
-                        </button>
                     </div>
+
+                    {error && (
+                        <p className="error-text text-center mb-md">
+                            {error}
+                        </p>
+                    )}
+
+                    <button
+                        type="submit"
+                        className="btn btn-primary btn-large btn-block"
+                        disabled={loading || !title.trim()}
+                    >
+                        {loading ? 'Creating...' : 'Create Session'}
+                    </button>
+                </form>
+
+                <div className="text-center mt-xl">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="btn btn-secondary"
+                    >
+                        Join as participant
+                    </button>
                 </div>
             </div>
-            );
+        </div>
+    );
 }
 
-            interface ModeButtonProps {
-                selected: boolean;
+interface ModeButtonProps {
+    selected: boolean;
     onClick: () => void;
-            icon: string;
-            label: string;
-            description: string;
+    icon: string;
+    label: string;
+    description: string;
 }
 
-            function ModeButton({selected, onClick, icon, label, description}: ModeButtonProps) {
+function ModeButton({ selected, onClick, icon, label, description }: ModeButtonProps) {
     return (
-            <button
-                type="button"
-                onClick={onClick}
-                className={`mode-button ${selected ? 'mode-button-selected' : ''}`}
-            >
-                <span className="mode-button-icon">{icon}</span>
-                <p className="mode-button-label">{label}</p>
-                <p className="mode-button-desc">{description}</p>
-            </button>
-            );
+        <button
+            type="button"
+            onClick={onClick}
+            className={`mode-button ${selected ? 'mode-button-selected' : ''}`}
+        >
+            <span className="mode-button-icon">{icon}</span>
+            <p className="mode-button-label">{label}</p>
+            <p className="mode-button-desc">{description}</p>
+        </button>
+    );
 }
 
-            export default PresenterDashboard;
+export default PresenterDashboard;
