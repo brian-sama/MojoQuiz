@@ -39,7 +39,7 @@ const LoginPage: React.FC = () => {
         try {
             const redirectUri = window.location.origin + window.location.pathname;
             const response = await api.post('/auth/linkedin', { code, redirectUri });
-            login(response.data.token, response.data.user);
+            login(response.token, response.user);
             navigate('/host');
         } catch (err: any) {
             setError(err.response?.data?.error || 'LinkedIn Authentication failed.');
@@ -95,7 +95,7 @@ const LoginPage: React.FC = () => {
 
         try {
             const response = await api.post('/auth/login', { email, password });
-            login(response.data.token, response.data.user);
+            login(response.token, response.user);
             navigate('/host');
         } catch (err: any) {
             setError(err.message || 'Invalid password. Please try again.');
@@ -128,7 +128,7 @@ const LoginPage: React.FC = () => {
                 password,
                 displayName
             });
-            login(response.data.token, response.data.user);
+            login(response.token, response.user);
             navigate('/host');
         } catch (err: any) {
             setError(err.message || 'Failed to complete registration.');
@@ -145,7 +145,7 @@ const LoginPage: React.FC = () => {
             const response = await api.post('/auth/google', {
                 credential: credentialResponse.credential
             });
-            login(response.data.token, response.data.user);
+            login(response.token, response.user);
             navigate('/host');
         } catch (err: any) {
             setError(err.message || 'Google Authentication failed.');
@@ -265,9 +265,15 @@ const LoginPage: React.FC = () => {
                             onSubmit={handleLogin}
                             className="form-step-container"
                         >
-                            <div className="mb-md text-center">
-                                <span className="text-secondary font-bold">{email}</span>
-                                <button type="button" onClick={resetFlow} className="link ml-sm text-sm">Change</button>
+                            <div className="mb-mg flex items-center justify-center gap-sm">
+                                <span className="text-secondary font-medium opacity-80">{email}</span>
+                                <button
+                                    type="button"
+                                    onClick={resetFlow}
+                                    className="btn-change-email"
+                                >
+                                    Change
+                                </button>
                             </div>
 
                             <div className="form-group-premium">
