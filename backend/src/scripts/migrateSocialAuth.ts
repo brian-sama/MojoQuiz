@@ -1,6 +1,6 @@
 /**
- * Migration Script: Social Authentication
- * Adds linkedin_id and microsoft_id to the users table.
+ * Migration Script: Social Authentication & Roles
+ * Adds linkedin_id and role columns to the users table.
  */
 
 import { Client } from 'pg';
@@ -35,14 +35,15 @@ async function migrateSocialAuth() {
         await client.connect();
         console.log('✅ Connected!\n');
 
-        console.log('📝 Adding social ID columns to users table...');
-
+        console.log('📝 Modifying users table...');
+        
         // Add linkedin_id column
         const linkedinExists = await sql`
             SELECT column_name 
             FROM information_schema.columns 
             WHERE table_name='users' AND column_name='linkedin_id'
         `;
+
         if (linkedinExists.length === 0) {
             await sql`ALTER TABLE users ADD COLUMN linkedin_id VARCHAR(100) UNIQUE`;
             console.log('✅ Added linkedin_id to users');
@@ -50,22 +51,23 @@ async function migrateSocialAuth() {
             console.log('ℹ️ linkedin_id column already exists');
         }
 
-        // Add microsoft_id column
-        const microsoftExists = await sql`
+        // Add role column
+        const roleExists = await sql`
             SELECT column_name 
             FROM information_schema.columns 
-            WHERE table_name='users' AND column_name='microsoft_id'
+            WHERE table_name='users' AND column_name='role'
         `;
-        if (microsoftExists.length === 0) {
-            await sql`ALTER TABLE users ADD COLUMN microsoft_id VARCHAR(100) UNIQUE`;
-            console.log('✅ Added microsoft_id to users');
+
+        if (roleExists.length === 0) {
+            await sql`ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'`;
+            console.log('✅ Added role to users');
         } else {
-            console.log('ℹ️ microsoft_id column already exists');
+            console.log('ℹ️ role column already exists');
         }
 
         console.log('\n📊 Creating indexes...');
-        await sql`CREATE INDEX IF NOT EXISTS idx_users_linkedin_id ON users(linkedin_id)`;
-        await sql`CREATE INDEX IF NOT EXISTS idx_users_microsoft_id ON users(microsoft_id)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_users_linkedin ON users(linkedin_id)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)`;
         console.log('✅ Indexes created\n');
 
         console.log('🎉 Migration complete!');

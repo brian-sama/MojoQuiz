@@ -45,6 +45,8 @@ async function migrateAuth() {
         password_hash TEXT,
         auth_provider VARCHAR(20) DEFAULT 'email',
         google_id VARCHAR(100) UNIQUE,
+        linkedin_id VARCHAR(100) UNIQUE,
+        role VARCHAR(20) DEFAULT 'user',
         is_verified BOOLEAN DEFAULT false,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         last_login_at TIMESTAMPTZ
