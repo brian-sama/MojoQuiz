@@ -1,14 +1,14 @@
-import express, { Response } from 'express';
+import express, { Router, Response } from 'express';
 import db from '../services/database.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 /**
  * Get full session report
  * GET /api/analytics/:sessionId
  */
-router.get('/:sessionId', authenticateToken, async (req: any, res: Response) => {
+router.get('/:sessionId', authenticate, async (req: any, res: Response) => {
     try {
         const { sessionId } = req.params;
 

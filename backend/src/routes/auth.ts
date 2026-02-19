@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../services/database.js';
@@ -9,7 +9,7 @@ import axios from 'axios';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const router = express.Router();
+const router: Router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 /**

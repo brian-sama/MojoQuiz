@@ -760,6 +760,58 @@ async function getNpsResults(questionId: string): Promise<{
 }
 
 // ============================================
+// ANALYSIS & REPORTING
+// ============================================
+
+/**
+ * Get a comprehensive report for a session
+ */
+async function getSessionReport(sessionId: string): Promise<any> {
+  const session = await getSessionById(sessionId);
+  if (!session) return null;
+
+  const questions = await getQuestionsBySession(sessionId);
+  const participants = await getSessionParticipants(sessionId);
+
+  // Summary statistics
+  const statsRows = await sql`
+        SELECT 
+            COUNT(DISTINCT participant_id)::int as total_participants,
+            COUNT(*)::int as total_responses,
+            COALESCE(AVG(response_time_ms), 0)::float as avg_response_time
+        FROM responses
+        WHERE session_id = ${sessionId}
+    `;
+
+  return {
+    session,
+    questions,
+    participants,
+    stats: statsRows[0]
+  };
+}
+
+/**
+ * Get leaderboard for a session based on scores
+ */
+async function getLeaderboard(sessionId: string): Promise<any[]> {
+  const rows = await sql`
+        SELECT 
+            p.id,
+            p.nickname,
+            SUM(r.score)::int as total_score,
+            COUNT(r.id) FILTER (WHERE r.is_correct = true)::int as correct_answers
+        FROM participants p
+        LEFT JOIN responses r ON p.id = r.participant_id
+        WHERE p.session_id = ${sessionId}
+        GROUP BY p.id, p.nickname
+        ORDER BY total_score DESC
+        LIMIT 50
+    `;
+  return rows;
+}
+
+// ============================================
 // FOLDER OPERATIONS
 // ============================================
 

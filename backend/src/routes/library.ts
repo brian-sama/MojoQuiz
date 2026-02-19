@@ -1,14 +1,14 @@
-import express, { Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import db from '../services/database.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 /**
  * List saved sessions
  * GET /api/library
  */
-router.get('/', authenticateToken, async (req: any, res: Response) => {
+router.get('/', authenticate, async (req: any, res: Response) => {
     try {
         const sessions = await db.getSessionsByUserId(req.user.userId);
         res.json(sessions);
@@ -22,7 +22,7 @@ router.get('/', authenticateToken, async (req: any, res: Response) => {
  * Duplicate a session
  * POST /api/library/:id/duplicate
  */
-router.post('/:id/duplicate', authenticateToken, async (req: any, res: Response) => {
+router.post('/:id/duplicate', authenticate, async (req: any, res: Response) => {
     try {
         const { id } = req.params;
         const { title } = req.body;
@@ -45,7 +45,7 @@ router.post('/:id/duplicate', authenticateToken, async (req: any, res: Response)
  * Delete a session (soft delete)
  * DELETE /api/library/:id
  */
-router.delete('/:id', authenticateToken, async (req: any, res: Response) => {
+router.delete('/:id', authenticate, async (req: any, res: Response) => {
     try {
         const { id } = req.params;
 

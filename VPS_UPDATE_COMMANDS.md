@@ -16,31 +16,10 @@ Navigate to the project directory and pull the changes from GitHub:
 
 ```bash
 cd MojoQuiz
-
-# Discard any local package-lock changes (just in case)
-# Pull the latest main branch
 git pull origin main
 ```
 
-## 3. Update Environment Variables
-
-You need to add your `GEMINI_API_KEY` to the backend configuration.
-
-```bash
-nano backend/.env
-```
-
-Add the line:
-
-```env
-GEMINI_API_KEY=your_actual_api_key_here
-```
-
-*(Press `Ctrl+O` to save, `Enter` to confirm, and `Ctrl+X` to exit)*
-
-## 4. Install Dependencies & Rebuild
-
-Run these commands to update dependencies and rebuild both frontend and backend:
+## 3. Install Dependencies & Rebuild
 
 ### Backend
 
@@ -58,7 +37,7 @@ npm install
 npm run build
 ```
 
-## 5. Restart Application
+## 4. Restart Application
 
 Restart the backend service to apply the changes:
 
@@ -67,8 +46,10 @@ cd ../backend
 pm2 restart mojoquiz-backend
 ```
 
-## 6. Verification
+## 5. Verification
 
 - Visit [https://mojoquiz.co.zw](https://mojoquiz.co.zw)
-- Verify the new "AI Extractor" tab is visible in the session host view.
-- Check that the mobile participant view loads correctly on your phone.
+- Check that the login page shows "Sign in or create an account"
+- Verify the floating label animates correctly on the email input
+- Confirm the background images crossfade smoothly
+- Test the host session view has opaque card backgrounds
