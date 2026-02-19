@@ -13,42 +13,52 @@ const router: Router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 /**
- * Register step 1: Send OTP
+ * Register (Simplified - No OTP)
  * POST /api/auth/register
  */
 router.post('/register', async (req: Request, res: Response) => {
     try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'Email is required' });
+        const { email, password, displayName } = req.body;
+
+        if (!email || !password || !displayName) {
+            return res.status(400).json({ error: 'Email, password, and full name are required' });
+        }
 
         const existingUser = await db.getUserByEmail(email);
-        if (existingUser && existingUser.is_verified) {
+        if (existingUser) {
             return res.status(400).json({ error: 'User already exists' });
         }
 
-        // Generate 6-digit code
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, 10);
+        const name = sanitizeInput(displayName);
 
-        let user = existingUser;
-        if (!user) {
-            user = await db.createUser({ email: email.toLowerCase(), is_verified: false });
-        }
-
-        await db.createAuthToken({
-            user_id: user.id,
+        // Create verified user immediately
+        const user = await db.createUser({
             email: email.toLowerCase(),
-            token_type: 'verify_email',
-            code,
-            expires_at: expiresAt
+            password_hash: passwordHash,
+            display_name: name,
+            auth_provider: 'email',
+            is_verified: true, // Auto-verified since email service is not set up
+            role: 'user'
         });
 
-        await emailService.sendOTP(email, code);
+        // Generate Token
+        const jwtToken = jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
-        res.json({ message: 'Verification code sent to email' });
+        res.json({
+            token: jwtToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                displayName: user.display_name,
+                role: user.role
+            }
+        });
+
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ error: 'Failed to start registration' });
+        res.status(500).json({ error: 'Failed to create account' });
     }
 });
 
