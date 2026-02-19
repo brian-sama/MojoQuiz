@@ -4,7 +4,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../hooks/useApi';
 import { motion, AnimatePresence } from 'framer-motion';
 import BouncingBackground from '../../components/common/BouncingBackground';
-import { useEffect } from 'react';
 
 type AuthStep = 'email' | 'login' | 'verify' | 'setup';
 
