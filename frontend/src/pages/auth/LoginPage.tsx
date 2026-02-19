@@ -146,7 +146,6 @@ const LoginPage: React.FC = () => {
         setError('');
         setMessage('');
         setPassword('');
-        setOtpCode('');
     };
 
     return (
