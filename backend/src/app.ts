@@ -21,6 +21,9 @@ import {
 
 import db from './services/database.js';
 import { aiService } from './services/aiService.js';
+import authRoutes from './routes/auth.js';
+import libraryRoutes from './routes/library.js';
+import analyticsRoutes from './routes/analytics.js';
 
 dotenv.config();
 
@@ -50,12 +53,30 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/library', libraryRoutes);
+app.use('/api/analytics', analyticsRoutes);
+
 // ============================================
 // HEALTH CHECK
 // ============================================
 
 app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+/**
+ * Get a youth-focused trivia fact
+ * GET /api/facts/youth
+ */
+app.get('/api/facts/youth', async (_req: Request, res: Response) => {
+    try {
+        const fact = await aiService.getTriviaFact();
+        res.json({ text: fact });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch trivia' });
+    }
 });
 
 // ============================================
@@ -68,10 +89,10 @@ app.get('/health', (_req: Request, res: Response) => {
  */
 app.post('/api/sessions', async (req: Request, res: Response) => {
     try {
-        const { title, presenterId, mode = 'mixed' } = req.body;
+        const { title, presenterId, mode = 'mixed', user_id } = req.body;
 
-        if (!title || !presenterId) {
-            return res.status(400).json({ error: 'Title and presenterId are required' });
+        if (!title || (!presenterId && !user_id)) {
+            return res.status(400).json({ error: 'Title and presenterId (or user_id) are required' });
         }
 
         // Generate unique join code
@@ -98,7 +119,7 @@ app.post('/api/sessions', async (req: Request, res: Response) => {
         const session = await db.createSession(
             joinCode!,
             sanitizeInput(title),
-            sanitizeInput(presenterId, 100),
+            user_id || sanitizeInput(presenterId, 100),
             mode,
             expiresAt
         );

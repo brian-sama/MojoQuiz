@@ -353,7 +353,7 @@ function PlayPage() {
         return (
             <div className="page page-centered">
                 <div className="text-center">
-                    <div className="animate-pulse mb-md emoji-large">🔌</div>
+                    <div className="animate-pulse mb-md emoji-large">Offline</div>
                     <p>Loading session...</p>
                 </div>
             </div>
@@ -365,7 +365,7 @@ function PlayPage() {
         return (
             <div className="page page-centered">
                 <div className="card text-center">
-                    <div className="emoji-large mb-md">😕</div>
+                    <div className="emoji-large mb-md">Not Found</div>
                     <h3>Oops!</h3>
                     <p className="text-muted mt-md">{error}</p>
                     <button
@@ -385,7 +385,7 @@ function PlayPage() {
             <div className="page page-centered">
                 <div className="text-center">
                     <h2 className="mb-md">{sessionTitle || 'Loading...'}</h2>
-                    <div className="animate-pulse mb-lg emoji-xlarge">⏳</div>
+                    <div className="animate-pulse mb-lg emoji-xlarge">Waiting...</div>
                     <p className="text-muted">Waiting for the host to start...</p>
                     <p className="text-muted mt-md text-sm">
                         {participantCount} participant{participantCount !== 1 ? 's' : ''} online
@@ -406,7 +406,7 @@ function PlayPage() {
                     <div className="text-xs text-muted">Join Code: {code?.toUpperCase()}</div>
                 </div>
                 <div className="flex items-center gap-sm">
-                    <span className="text-sm">👥 {participantCount}</span>
+                    <span className="text-sm">Participants: {participantCount}</span>
                 </div>
             </header>
 

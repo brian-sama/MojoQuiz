@@ -16,29 +16,62 @@ export const api = {
         const separator = this.baseUrl.endsWith('/') || endpoint.startsWith('/') ? '' : '/';
         const url = `${this.baseUrl}${separator}${endpoint}`;
 
+        const token = localStorage.getItem('auth_token');
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            ...(options.headers as any),
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(url, {
             ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
+            headers,
         });
 
-        const data = await response.json();
+        // Handle empty responses
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
 
         if (!response.ok) {
+            if (response.status === 401) {
+                // Potential token expiry - could handle redirect here
+                // localStorage.removeItem('auth_token');
+            }
             throw new Error(data.error || 'Request failed');
         }
 
         return data;
     },
 
-    // Sessions
-    async createSession(title: string, mode: string, presenterId: string) {
-        return this.request('sessions', {
+    async get(endpoint: string) {
+        return this.request(endpoint, { method: 'GET' });
+    },
+
+    async post(endpoint: string, body: any) {
+        return this.request(endpoint, {
             method: 'POST',
-            body: JSON.stringify({ title, mode, presenterId }),
+            body: JSON.stringify(body),
         });
+    },
+
+    async patch(endpoint: string, body: any) {
+        return this.request(endpoint, {
+            method: 'PATCH',
+            body: JSON.stringify(body),
+        });
+    },
+
+    async delete(endpoint: string) {
+        return this.request(endpoint, { method: 'DELETE' });
+    },
+
+    // Sessions
+    async createSession(title: string, mode: string, presenterId: string, user_id?: string) {
+        const response = await this.post('sessions', { title, mode, presenterId, user_id });
+        return response.data;
     },
 
     async validateSession(code: string) {
@@ -101,7 +134,7 @@ export const api = {
 
     // Leaderboard
     async getLeaderboard(sessionId: string, limit = 10) {
-        return this.request(`sessions/${sessionId}/leaderboard?limit=${limit}`);
+        return this.get(`sessions/${sessionId}/leaderboard?limit=${limit}`);
     },
 };
 

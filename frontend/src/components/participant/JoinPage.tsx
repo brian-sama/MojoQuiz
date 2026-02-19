@@ -1,11 +1,9 @@
-/**
- * Join Page Component
- * Entry point for participants to join a session
- */
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../hooks/useApi';
+import BouncingBackground from '../common/BouncingBackground';
+import TriviaSection from '../common/TriviaSection';
 
 function JoinPage() {
     const { code: urlCode } = useParams<{ code: string }>();
@@ -88,105 +86,140 @@ function JoinPage() {
 
     return (
         <div className="page page-centered">
-            <div className="container">
-                <div className="text-center mb-lg">
+            <BouncingBackground />
+
+            <div className="container relative z-1">
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-lg"
+                >
                     <h1 className="app-title">
                         Engage
                     </h1>
                     <p className="text-muted">
                         Join the live session
                     </p>
-                </div>
+                </motion.div>
 
-                {step === 'code' ? (
-                    <form onSubmit={handleCodeSubmit} className="card animate-fade-in">
-                        <h2 className="text-center mb-lg">Enter Code</h2>
-
-                        <input
-                            type="text"
-                            className="input input-large mb-md"
-                            placeholder="A3B7K9"
-                            value={joinCode}
-                            onChange={(e) => {
-                                setJoinCode(e.target.value.toUpperCase());
-                                setError('');
-                            }}
-                            maxLength={6}
-                            autoFocus
-                            autoComplete="off"
-                        />
-
-                        {error && (
-                            <p className="error-text mb-md">
-                                {error}
-                            </p>
-                        )}
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-large btn-block"
-                            disabled={loading || joinCode.length < 6}
+                <AnimatePresence mode="wait">
+                    {step === 'code' ? (
+                        <motion.form
+                            key="code-form"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2 }}
+                            onSubmit={handleCodeSubmit}
+                            className="card"
                         >
-                            {loading ? 'Checking...' : 'Join Session'}
-                        </button>
-                    </form>
-                ) : (
-                    <form onSubmit={handleNicknameSubmit} className="card animate-fade-in">
-                        <div className="text-center mb-lg">
-                            <p className="text-muted mb-md">Joining</p>
-                            <h2>{sessionTitle}</h2>
-                        </div>
+                            <h2 className="text-center mb-lg">Enter Code</h2>
 
-                        <input
-                            type="text"
-                            className="input mb-md"
-                            placeholder="Enter your nickname"
-                            value={nickname}
-                            onChange={(e) => {
-                                setNickname(e.target.value);
-                                setError('');
-                            }}
-                            maxLength={30}
-                            autoFocus
-                            autoComplete="off"
-                        />
+                            <input
+                                type="text"
+                                className="input input-large mb-md"
+                                placeholder="A3B7K9"
+                                value={joinCode}
+                                onChange={(e) => {
+                                    setJoinCode(e.target.value.toUpperCase());
+                                    setError('');
+                                }}
+                                maxLength={6}
+                                autoFocus
+                                autoComplete="off"
+                            />
 
-                        {error && (
-                            <p className="error-text mb-md">
-                                {error}
-                            </p>
-                        )}
+                            {error && (
+                                <p className="error-text mb-md">
+                                    {error}
+                                </p>
+                            )}
 
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-large btn-block"
-                            disabled={loading || nickname.trim().length < 2}
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                type="submit"
+                                className="btn btn-primary btn-large btn-block"
+                                disabled={loading || joinCode.length < 6}
+                            >
+                                {loading ? 'Checking...' : 'Join Session'}
+                            </motion.button>
+                        </motion.form>
+                    ) : (
+                        <motion.form
+                            key="nickname-form"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2 }}
+                            onSubmit={handleNicknameSubmit}
+                            className="card"
                         >
-                            {loading ? 'Joining...' : 'Join'}
-                        </button>
+                            <div className="text-center mb-lg">
+                                <p className="text-muted mb-md">Joining</p>
+                                <h2>{sessionTitle}</h2>
+                            </div>
 
-                        <button
-                            type="button"
-                            className="btn btn-secondary btn-block mt-md"
-                            onClick={() => {
-                                setStep('code');
-                                setJoinCode('');
-                                setError('');
-                            }}
-                        >
-                            ← Different Code
-                        </button>
-                    </form>
-                )}
+                            <input
+                                type="text"
+                                className="input mb-md"
+                                placeholder="Enter your nickname"
+                                value={nickname}
+                                onChange={(e) => {
+                                    setNickname(e.target.value);
+                                    setError('');
+                                }}
+                                maxLength={30}
+                                autoFocus
+                                autoComplete="off"
+                            />
 
-                <div className="text-center mt-xl">
+                            {error && (
+                                <p className="error-text mb-md">
+                                    {error}
+                                </p>
+                            )}
+
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                type="submit"
+                                className="btn btn-primary btn-large btn-block"
+                                disabled={loading || nickname.trim().length < 2}
+                            >
+                                {loading ? 'Joining...' : 'Join'}
+                            </motion.button>
+
+                            <button
+                                type="button"
+                                className="btn btn-secondary btn-block mt-md"
+                                onClick={() => {
+                                    setStep('code');
+                                    setJoinCode('');
+                                    setError('');
+                                }}
+                            >
+                                Different Code
+                            </button>
+                        </motion.form>
+                    )}
+                </AnimatePresence>
+
+                <TriviaSection />
+
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="text-center mt-xl"
+                >
                     <button
                         onClick={() => window.location.href = '/host'}
                         className="btn btn-secondary"
                     >
                         Create a session
                     </button>
-                </div>
+                </motion.div>
             </div>
         </div>
     );

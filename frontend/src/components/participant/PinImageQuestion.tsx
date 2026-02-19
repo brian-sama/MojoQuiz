@@ -33,7 +33,7 @@ export default function PinImageQuestion({ question, onSubmit, disabled, hasResp
     if (hasResponded) {
         return (
             <div className="text-center py-lg">
-                <div className="emoji-large mb-md">📍</div>
+                <div className="emoji-large mb-md">Select Location</div>
                 <h3>Pin Dropped!</h3>
                 <p className="text-muted mt-sm">Check the presenter's screen to see the heatmap.</p>
             </div>

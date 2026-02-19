@@ -15,6 +15,15 @@ export interface Session {
     created_at: Date;
     expires_at: Date;
     ended_at: Date | null;
+    // Library management
+    user_id?: string | null;
+    folder_id?: string | null;
+    is_favorite?: boolean;
+    is_deleted?: boolean;
+    visibility?: 'private' | 'public' | 'workspace';
+    description?: string;
+    thumbnail_url?: string | null;
+    play_count?: number;
 }
 
 export interface SessionSettings {
@@ -46,11 +55,14 @@ export type QuestionType =
     | 'scale'          // Slider/rating
     | 'ranking'        // Reordering items
     | 'pin_image'      // Drop pin on image
+    | 'brainstorm'     // Idea submission + upvoting
+    | 'nps'            // Net Promoter Score (0-10)
     | 'quiz_mc'        // Quiz multiple choice
     | 'quiz_tf'        // True/False
     | 'quiz_order'     // Ordering
     | 'quiz_slider'    // Estimation slider
-    | 'quiz_typed';    // Typed answer
+    | 'quiz_typed'     // Typed answer
+    | 'quiz_audio';    // Quiz with audio clip
 
 export interface Question {
     id: string;
@@ -67,6 +79,9 @@ export interface Question {
     is_results_visible: boolean;
     activated_at: Date | null;
     created_at: Date;
+    // Media
+    audio_url?: string | null;
+    media_url?: string | null;
 }
 
 export interface QuestionOption {
@@ -98,6 +113,17 @@ export interface QuestionSettings {
     // Quiz settings
     points?: number;
     tolerance?: number; // For slider estimation
+
+    // NPS settings
+    nps_question?: string; // Custom NPS prompt
+
+    // Brainstorm settings
+    max_ideas_per_user?: number;
+    allow_voting?: boolean;
+
+    // Audio settings
+    audio_autoplay?: boolean;
+    audio_loop?: boolean;
 }
 
 // Response types
@@ -122,7 +148,10 @@ export type ResponseData =
     | { type: 'quiz_tf'; answer: boolean }
     | { type: 'quiz_order'; order: number[] }
     | { type: 'quiz_slider'; value: number }
-    | { type: 'quiz_typed'; answer: string };
+    | { type: 'quiz_typed'; answer: string }
+    | { type: 'quiz_audio'; option_index: number }
+    | { type: 'nps'; value: number }
+    | { type: 'brainstorm'; idea: string };
 
 // Word submission
 export interface WordSubmission {
@@ -245,3 +274,71 @@ export const ErrorCodes = {
     INVALID_INPUT: 'INVALID_INPUT',
     PROFANITY_DETECTED: 'PROFANITY_DETECTED',
 } as const;
+
+// Brainstorm types
+export interface BrainstormIdea {
+    id: string;
+    question_id: string;
+    participant_id: string;
+    content: string;
+    group_label: string | null;
+    status: 'active' | 'grouped' | 'hidden';
+    created_at: Date;
+    vote_count?: number;
+    has_voted?: boolean; // For current participant context
+}
+
+export interface BrainstormVote {
+    id: string;
+    idea_id: string;
+    participant_id: string;
+    created_at: Date;
+}
+
+// Folder type
+export interface Folder {
+    id: string;
+    user_id: string;
+    name: string;
+    parent_id: string | null;
+    created_at: Date;
+    updated_at: Date;
+    item_count?: number;
+}
+
+// Brainstorm socket events
+export interface SubmitIdeaPayload {
+    question_id: string;
+    content: string;
+}
+
+export interface VoteIdeaPayload {
+    idea_id: string;
+}
+
+// User & Auth types
+export interface User {
+    id: string;
+    email: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    password_hash: string | null;
+    auth_provider: 'email' | 'google' | 'linkedin';
+    google_id: string | null;
+    linkedin_id: string | null;
+    role: 'user' | 'admin';
+    is_verified: boolean;
+    created_at: Date;
+    last_login_at: Date | null;
+}
+
+export interface AuthToken {
+    id: string;
+    user_id: string | null;
+    email: string | null;
+    token_type: 'verify_email' | 'password_reset';
+    code: string;
+    expires_at: Date;
+    used_at: Date | null;
+    created_at: Date;
+}

@@ -33,7 +33,7 @@ function WordCloudInput({ question, onSubmit, disabled, hasResponded }: WordClou
 
     return (
         <div className="card animate-slide-up">
-            <h2 className="text-center mb-lg" style={{ lineHeight: 1.4 }}>
+            <h2 className="text-center mb-lg line-height-1-4">
                 {question.question_text}
             </h2>
 
@@ -46,14 +46,11 @@ function WordCloudInput({ question, onSubmit, disabled, hasResponded }: WordClou
                     <input
                         key={index}
                         type="text"
-                        className="input"
+                        className={`input ${word.trim().length >= 2 ? 'input-success' : ''}`}
                         placeholder={`Word ${index + 1}`}
                         value={word}
                         onChange={(e) => handleInputChange(e.target.value, index)}
                         disabled={disabled}
-                        style={{
-                            borderColor: word.trim().length >= 2 ? 'var(--color-success)' : undefined,
-                        }}
                     />
                 ))}
             </div>
@@ -70,7 +67,7 @@ function WordCloudInput({ question, onSubmit, disabled, hasResponded }: WordClou
 
             {hasResponded && (
                 <div className="text-center mt-lg animate-fade-in">
-                    <span style={{ fontSize: '2rem' }}>☁️</span>
+                    <span className="text-xl-2">Word Cloud</span>
                     <p className="text-muted mt-sm">Your words have been added!</p>
                 </div>
             )}

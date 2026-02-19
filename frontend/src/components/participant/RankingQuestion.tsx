@@ -63,7 +63,7 @@ export default function RankingQuestion({ question, onSubmit, disabled, hasRespo
     if (hasResponded) {
         return (
             <div className="text-center py-lg">
-                <div className="emoji-large mb-md">📊</div>
+                <div className="emoji-large mb-md">Ranking</div>
                 <h3>Ranking Submitted</h3>
                 <p className="text-muted mt-sm">Wait for the host to reveal the overall ranks!</p>
             </div>

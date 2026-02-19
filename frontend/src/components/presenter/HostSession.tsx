@@ -606,7 +606,7 @@ function HostSession() {
                                     onClick={handleExtractQuestions}
                                     disabled={isExtracting || sourceText.length < 50}
                                 >
-                                    {isExtracting ? 'Extracting...' : '✨ Generate Questions'}
+                                    {isExtracting ? 'Extracting...' : 'Generate Questions'}
                                 </button>
 
                                 {extractedQuestions.length > 0 && (

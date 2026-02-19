@@ -310,6 +310,12 @@ export function initializeSocketHandlers(io: Server): void {
                     case 'pin_image':
                         results = await db.getPinImageResults(question_id);
                         break;
+                    case 'nps':
+                        results = await db.getNpsResults(question_id);
+                        break;
+                    case 'quiz_slider':
+                        results = await db.getScaleStatistics(question_id);
+                        break;
                     default:
                         results = await db.getPollResults(question_id);
                 }
@@ -515,6 +521,21 @@ export function initializeSocketHandlers(io: Server): void {
                     case 'open_ended':
                         results = await db.getTextResponses(question_id, 'approved');
                         break;
+                    case 'nps':
+                        results = await db.getNpsResults(question_id);
+                        break;
+                    case 'brainstorm':
+                        results = await db.getBrainstormIdeas(question_id);
+                        break;
+                    case 'ranking':
+                        results = await db.getRankingResults(question_id);
+                        break;
+                    case 'pin_image':
+                        results = await db.getPinImageResults(question_id);
+                        break;
+                    case 'quiz_slider':
+                        results = await db.getScaleStatistics(question_id);
+                        break;
                 }
 
                 io.to(`session:${socketData.sessionId}`).emit('results_revealed', {
@@ -571,6 +592,85 @@ export function initializeSocketHandlers(io: Server): void {
 
             } catch (error) {
                 console.error('Error ending session:', error);
+            }
+        });
+
+        // ============================================
+        // BRAINSTORM EVENTS
+        // ============================================
+
+        /**
+         * Submit an idea for brainstorming
+         */
+        socket.on('submit_idea', async (payload: {
+            question_id: string;
+            content: string;
+        }) => {
+            try {
+                const { question_id, content } = payload;
+
+                if (!socketData.participantId) {
+                    socket.emit('error', { code: ErrorCodes.INVALID_SESSION, message: 'Not in a session' });
+                    return;
+                }
+
+                const question = await db.getQuestionById(question_id);
+                if (!question || question.is_locked) {
+                    socket.emit('error', { code: ErrorCodes.QUESTION_LOCKED, message: 'Submissions closed' });
+                    return;
+                }
+
+                const cleanContent = content.substring(0, 280).trim();
+                if (!cleanContent) return;
+
+                const result = await db.submitIdea(question_id, socketData.participantId, cleanContent);
+
+                if (!result.success) {
+                    socket.emit('error', { code: 'MAX_IDEAS', message: 'Maximum ideas reached' });
+                    return;
+                }
+
+                socket.emit('idea_submitted', { success: true, idea: result.idea });
+
+                // Broadcast updated ideas to everyone in the session
+                const ideas = await db.getBrainstormIdeas(question_id);
+                io.to(`session:${socketData.sessionId}`).emit('ideas_updated', {
+                    question_id,
+                    ideas,
+                });
+
+            } catch (error) {
+                console.error('Error submitting idea:', error);
+                socket.emit('error', { code: 'SUBMIT_ERROR', message: 'Failed to submit idea' });
+            }
+        });
+
+        /**
+         * Vote/unvote an idea in brainstorming
+         */
+        socket.on('vote_idea', async (payload: { idea_id: string }) => {
+            try {
+                if (!socketData.participantId) {
+                    socket.emit('error', { code: ErrorCodes.INVALID_SESSION, message: 'Not in a session' });
+                    return;
+                }
+
+                const { idea_id } = payload;
+                const result = await db.voteIdea(idea_id, socketData.participantId);
+
+                socket.emit('vote_toggled', { idea_id, action: result.action });
+
+                // Get parent question for room broadcast
+                // We need to find the question_id from the idea
+                // Small optimization: we broadcast all ideas
+                io.to(`session:${socketData.sessionId}`).emit('vote_updated', {
+                    idea_id,
+                    action: result.action,
+                });
+
+            } catch (error) {
+                console.error('Error voting on idea:', error);
+                socket.emit('error', { code: 'VOTE_ERROR', message: 'Failed to vote' });
             }
         });
 

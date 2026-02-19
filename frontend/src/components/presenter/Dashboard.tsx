@@ -6,9 +6,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../hooks/useApi';
+import { useAuth } from '../../hooks/useAuth';
 
 function PresenterDashboard() {
     const navigate = useNavigate();
+    const { user, logout } = useAuth();
     const [title, setTitle] = useState('');
     const [mode, setMode] = useState<'mentimeter' | 'kahoot'>('mentimeter');
     const [loading, setLoading] = useState(false);
@@ -26,9 +28,8 @@ function PresenterDashboard() {
         setError('');
 
         try {
-            // Using a simple identifier for the presenter
-            const presenterId = 'brian-presenter';
-            const data = await api.createSession(title.trim(), mode, presenterId);
+            const presenterId = user?.displayName || 'Guest Presenter';
+            const data = await api.createSession(title.trim(), mode, presenterId, user?.id);
 
             // Store session info
             localStorage.setItem('currentSession', JSON.stringify(data));
@@ -46,13 +47,26 @@ function PresenterDashboard() {
     return (
         <div className="page page-centered">
             <div className="container container-sm">
-                <div className="text-center mb-xl">
-                    <h1 className="app-title">
-                        Create Session
-                    </h1>
-                    <p className="text-muted">
-                        Start a live engagement session for your audience
-                    </p>
+                <div className="flex justify-between items-center mb-xl">
+                    <div className="text-left">
+                        <h1 className="app-title">
+                            Create Session
+                        </h1>
+                        <p className="text-muted">
+                            Start a live engagement session for your audience
+                        </p>
+                    </div>
+                    {user && (
+                        <div className="flex items-center gap-md">
+                            <div className="text-right">
+                                <p className="font-bold">{user.displayName}</p>
+                                <button onClick={logout} className="link text-sm">Logout</button>
+                            </div>
+                            {user.avatarUrl && (
+                                <img src={user.avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full" />
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <form onSubmit={handleCreateSession} className="card">
@@ -111,7 +125,7 @@ function PresenterDashboard() {
 
                 <div className="text-center mt-xl">
                     <button
-                        onClick={() => window.location.href = '/'}
+                        onClick={() => navigate('/')}
                         className="btn btn-secondary"
                     >
                         Join as participant

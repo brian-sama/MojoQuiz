@@ -51,5 +51,37 @@ export const aiService = {
             console.error('AI Question Generation Error:', error);
             throw new Error('Failed to generate questions from the provided text.');
         }
+    },
+
+    async getTriviaFact() {
+        if (!process.env.GEMINI_API_KEY) {
+            return "Young people are the leaders of today and tomorrow. Stay engaged!";
+        }
+
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        const prompt = `
+            Generate a short, one-sentence interesting fact or engagement tip for young people.
+            The topic should fall into one of these categories:
+            1. Youth Engagement / Participation
+            2. Mental Health awareness
+            3. Sexual and Reproductive Health and Rights (SRHR)
+            4. Leadership and Community Impact
+
+            Requirements:
+            - Content must be positive, educational, and empowering.
+            - Keep it under 25 words.
+            - Avoid sensitive/explicit clinical details; keep it high-level and relatable.
+            - Return ONLY the text of the fact. No other formatting.
+            - Do NOT include any emojis.
+        `;
+
+        try {
+            const result = await model.generateContent(prompt);
+            return result.response.text().trim();
+        } catch (error) {
+            console.error('AI Trivia Error:', error);
+            return "Community engagement helps youth build confidence and develop valuable leadership skills.";
+        }
     }
 };

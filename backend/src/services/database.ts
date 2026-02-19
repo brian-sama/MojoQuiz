@@ -16,6 +16,8 @@ import type {
   TextResponse,
   WordCloudWord,
   LeaderboardEntry,
+  User,
+  AuthToken
 } from '../types/index.js';
 
 // Initialize PostgreSQL Pool
@@ -48,14 +50,62 @@ export async function createSession(
   title: string,
   presenterId: string,
   mode: string = 'mixed',
-  expiresAt: Date
+  expiresAt: Date,
+  user_id?: string
 ): Promise<Session> {
   const result = await sql`
-    INSERT INTO sessions (join_code, title, presenter_id, mode, expires_at)
-    VALUES (${joinCode}, ${title}, ${presenterId}, ${mode}, ${expiresAt})
+    INSERT INTO sessions (join_code, title, presenter_id, mode, expires_at, user_id)
+    VALUES (${joinCode}, ${title}, ${presenterId}, ${mode}, ${expiresAt}, ${user_id})
     RETURNING *
   `;
   return result[0] as Session;
+}
+
+export async function getSessionsByUserId(userId: string): Promise<Session[]> {
+  const result = await sql`
+    SELECT * FROM sessions 
+    WHERE user_id = ${userId} AND is_deleted = false
+    ORDER BY created_at DESC
+  `;
+  return result as Session[];
+}
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  await sql`
+    UPDATE sessions SET is_deleted = true WHERE id = ${sessionId}
+  `;
+}
+
+export async function duplicateSession(sessionId: string, newTitle?: string): Promise<Session> {
+  const session = await getSessionById(sessionId);
+  if (!session) throw new Error('Session not found');
+
+  const questions = await getQuestionsBySession(sessionId);
+
+  // Create new session
+  const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h default
+
+  const newSession = await createSession(
+    joinCode,
+    newTitle || `${session.title} (Copy)`,
+    session.presenter_id,
+    session.mode,
+    expiresAt,
+    session.user_id || undefined
+  );
+
+  // Copy questions
+  for (const q of questions) {
+    await createQuestion({
+      ...q,
+      session_id: newSession.id,
+      id: undefined, // Let DB generate new ID
+      is_active: false
+    });
+  }
+
+  return newSession;
 }
 
 export async function getSessionByCode(joinCode: string): Promise<Session | null> {
@@ -489,27 +539,275 @@ export async function moderateTextResponse(
 }
 
 // ============================================
-// LEADERBOARD OPERATIONS
+// USER & AUTH OPERATIONS
 // ============================================
 
-export async function getLeaderboard(
-  sessionId: string,
-  limit: number = 10
-): Promise<LeaderboardEntry[]> {
+export async function createUser(userData: Partial<User>): Promise<User> {
   const result = await sql`
-    SELECT id as participant_id, nickname, total_score,
-           RANK() OVER (ORDER BY total_score DESC) as rank
-    FROM participants
-    WHERE session_id = ${sessionId} AND is_removed = false AND nickname IS NOT NULL
-    ORDER BY total_score DESC
-    LIMIT ${limit}
+    INSERT INTO users (
+      email, display_name, password_hash, auth_provider, google_id, linkedin_id, role, is_verified
+    )
+    VALUES (
+      ${userData.email}, ${userData.display_name}, ${userData.password_hash}, 
+      ${userData.auth_provider || 'email'}, ${userData.google_id}, 
+      ${userData.linkedin_id}, ${userData.role || 'user'}, ${userData.is_verified || false}
+    )
+    RETURNING *
   `;
-  return result.map((row: any) => ({
-    participant_id: row.participant_id,
-    nickname: row.nickname,
-    total_score: row.total_score,
-    rank: parseInt(row.rank, 10),
-  }));
+  return result[0] as User;
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const result = await sql`SELECT * FROM users WHERE email = ${email.toLowerCase()}`;
+  return (result[0] as User) || null;
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  const result = await sql`SELECT * FROM users WHERE id = ${id}`;
+  return (result[0] as User) || null;
+}
+
+export async function getUserByGoogleId(googleId: string): Promise<User | null> {
+  const result = await sql`SELECT * FROM users WHERE google_id = ${googleId}`;
+  return (result[0] as User) || null;
+}
+
+export async function getUserByLinkedinId(linkedinId: string): Promise<User | null> {
+  const result = await sql`SELECT * FROM users WHERE linkedin_id = ${linkedinId}`;
+  return (result[0] as User) || null;
+}
+
+export async function updateUser(id: string, updates: Partial<User>): Promise<User> {
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  if (updates.display_name !== undefined) {
+    fields.push(`display_name = $${fields.length + 1}`);
+    values.push(updates.display_name);
+  }
+  if (updates.password_hash !== undefined) {
+    fields.push(`password_hash = $${fields.length + 1}`);
+    values.push(updates.password_hash);
+  }
+  if (updates.is_verified !== undefined) {
+    fields.push(`is_verified = $${fields.length + 1}`);
+    values.push(updates.is_verified);
+  }
+  if (updates.avatar_url !== undefined) {
+    fields.push(`avatar_url = $${fields.length + 1}`);
+    values.push(updates.avatar_url);
+  }
+  if (updates.last_login_at !== undefined) {
+    fields.push(`last_login_at = $${fields.length + 1}`);
+    values.push(updates.last_login_at);
+  }
+  if (updates.google_id !== undefined) {
+    fields.push(`google_id = $${fields.length + 1}`);
+    values.push(updates.google_id);
+  }
+  if (updates.linkedin_id !== undefined) {
+    fields.push(`linkedin_id = $${fields.length + 1}`);
+    values.push(updates.linkedin_id);
+  }
+  if (updates.role !== undefined) {
+    fields.push(`role = $${fields.length + 1}`);
+    values.push(updates.role);
+  }
+
+  if (fields.length === 0) return (await getUserById(id))!;
+
+  const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${fields.length + 1} RETURNING *`;
+  const result = await pool.query(query, [...values, id]);
+  return result.rows[0] as User;
+}
+
+export async function createAuthToken(tokenData: Partial<AuthToken>): Promise<AuthToken> {
+  const result = await sql`
+    INSERT INTO auth_tokens (user_id, email, token_type, code, expires_at)
+    VALUES (${tokenData.user_id}, ${tokenData.email}, ${tokenData.token_type}, ${tokenData.code}, ${tokenData.expires_at})
+    RETURNING *
+  `;
+  return result[0] as AuthToken;
+}
+
+export async function getValidAuthToken(email: string, code: string, type: string): Promise<AuthToken | null> {
+  const result = await sql`
+    SELECT * FROM auth_tokens 
+    WHERE (email = ${email} OR user_id IN (SELECT id FROM users WHERE email = ${email}))
+    AND code = ${code} 
+    AND token_type = ${type}
+    AND expires_at > NOW()
+    AND used_at IS NULL
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+  return (result[0] as AuthToken) || null;
+}
+
+export async function markAuthTokenUsed(tokenId: string): Promise<void> {
+  await sql`UPDATE auth_tokens SET used_at = NOW() WHERE id = ${tokenId}`;
+}
+
+// ============================================
+// BRAINSTORM OPERATIONS
+// ============================================
+
+async function submitIdea(
+  questionId: string,
+  participantId: string,
+  content: string
+): Promise<{ success: boolean; idea?: any }> {
+  const existing = await sql`
+    SELECT id FROM brainstorm_ideas
+    WHERE question_id = ${questionId} AND participant_id = ${participantId}
+  `;
+  // Check max ideas per user (from question settings)
+  const question = await getQuestionById(questionId);
+  const maxIdeas = question?.settings?.max_ideas_per_user || 10;
+  if (existing.length >= maxIdeas) {
+    return { success: false };
+  }
+  const rows = await sql`
+    INSERT INTO brainstorm_ideas (question_id, participant_id, content)
+    VALUES (${questionId}, ${participantId}, ${content})
+    RETURNING *
+  `;
+  return { success: true, idea: rows[0] };
+}
+
+async function getBrainstormIdeas(questionId: string): Promise<any[]> {
+  const rows = await sql`
+    SELECT bi.*, COALESCE(bv.vote_count, 0)::int AS vote_count
+    FROM brainstorm_ideas bi
+    LEFT JOIN (
+      SELECT idea_id, COUNT(*) AS vote_count FROM brainstorm_votes GROUP BY idea_id
+    ) bv ON bv.idea_id = bi.id
+    WHERE bi.question_id = ${questionId} AND bi.status = 'active'
+    ORDER BY vote_count DESC, bi.created_at ASC
+  `;
+  return rows;
+}
+
+async function voteIdea(
+  ideaId: string,
+  participantId: string
+): Promise<{ success: boolean; action: 'voted' | 'unvoted' }> {
+  // Toggle vote
+  const existing = await sql`
+    SELECT id FROM brainstorm_votes
+    WHERE idea_id = ${ideaId} AND participant_id = ${participantId}
+  `;
+  if (existing.length > 0) {
+    await sql`
+      DELETE FROM brainstorm_votes
+      WHERE idea_id = ${ideaId} AND participant_id = ${participantId}
+    `;
+    return { success: true, action: 'unvoted' };
+  } else {
+    await sql`
+      INSERT INTO brainstorm_votes (idea_id, participant_id)
+      VALUES (${ideaId}, ${participantId})
+    `;
+    return { success: true, action: 'voted' };
+  }
+}
+
+async function getIdeaVotesForParticipant(
+  questionId: string,
+  participantId: string
+): Promise<string[]> {
+  const rows = await sql`
+    SELECT bv.idea_id FROM brainstorm_votes bv
+    JOIN brainstorm_ideas bi ON bi.id = bv.idea_id
+    WHERE bi.question_id = ${questionId} AND bv.participant_id = ${participantId}
+  `;
+  return rows.map((r: any) => r.idea_id);
+}
+
+// ============================================
+// NPS OPERATIONS
+// ============================================
+
+async function getNpsResults(questionId: string): Promise<{
+  count: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  nps_score: number;
+  average: number;
+}> {
+  const rows = await sql`
+    SELECT
+      COUNT(*)::int AS count,
+      COALESCE(AVG((response_data->>'value')::numeric), 0) AS average,
+      COUNT(*) FILTER (WHERE (response_data->>'value')::int >= 9)::int AS promoters,
+      COUNT(*) FILTER (WHERE (response_data->>'value')::int BETWEEN 7 AND 8)::int AS passives,
+      COUNT(*) FILTER (WHERE (response_data->>'value')::int <= 6)::int AS detractors
+    FROM responses
+    WHERE question_id = ${questionId}
+  `;
+  const r = rows[0];
+  const total = Number(r.count) || 1;
+  const nps_score = Math.round(((Number(r.promoters) - Number(r.detractors)) / total) * 100);
+  return {
+    count: Number(r.count),
+    promoters: Number(r.promoters),
+    passives: Number(r.passives),
+    detractors: Number(r.detractors),
+    nps_score,
+    average: Number(Number(r.average).toFixed(1)),
+  };
+}
+
+// ============================================
+// FOLDER OPERATIONS
+// ============================================
+
+async function createFolder(userId: string, name: string, parentId?: string): Promise<any> {
+  const rows = await sql`
+    INSERT INTO folders (user_id, name, parent_id)
+    VALUES (${userId}, ${name}, ${parentId || null})
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+async function getFoldersByUser(userId: string): Promise<any[]> {
+  const rows = await sql`
+    SELECT f.*, COALESCE(sc.count, 0)::int AS item_count
+    FROM folders f
+    LEFT JOIN (
+      SELECT folder_id, COUNT(*) AS count FROM sessions WHERE folder_id IS NOT NULL GROUP BY folder_id
+    ) sc ON sc.folder_id = f.id
+    WHERE f.user_id = ${userId}
+    ORDER BY f.name ASC
+  `;
+  return rows;
+}
+
+async function updateFolder(folderId: string, name: string): Promise<void> {
+  await sql`UPDATE folders SET name = ${name}, updated_at = NOW() WHERE id = ${folderId}`;
+}
+
+async function deleteFolder(folderId: string): Promise<void> {
+  // Unassign sessions first
+  await sql`UPDATE sessions SET folder_id = NULL WHERE folder_id = ${folderId}`;
+  await sql`DELETE FROM folders WHERE id = ${folderId}`;
+}
+
+async function moveSessionToFolder(sessionId: string, folderId: string | null): Promise<void> {
+  await sql`UPDATE sessions SET folder_id = ${folderId} WHERE id = ${sessionId}`;
+}
+
+async function toggleFavorite(sessionId: string): Promise<boolean> {
+  const rows = await sql`
+    UPDATE sessions SET is_favorite = NOT is_favorite WHERE id = ${sessionId} RETURNING is_favorite
+  `;
+  return rows[0]?.is_favorite ?? false;
+}
+
+async function updateSessionVisibility(sessionId: string, visibility: string): Promise<void> {
+  await sql`UPDATE sessions SET visibility = ${visibility} WHERE id = ${sessionId}`;
 }
 
 export default {
@@ -547,6 +845,7 @@ export default {
   getScaleStatistics,
   getRankingResults,
   getPinImageResults,
+  getSessionReport,
 
   submitResponse,
 
@@ -559,6 +858,38 @@ export default {
   getTextResponses,
   moderateTextResponse,
 
+  // Brainstorm
+  submitIdea,
+  getBrainstormIdeas,
+  voteIdea,
+  getIdeaVotesForParticipant,
+
+  // NPS
+  getNpsResults,
+
   // Leaderboard
   getLeaderboard,
+
+  // Library & Folders
+  getSessionsByUserId,
+  duplicateSession,
+  deleteSession,
+  createFolder,
+  getFoldersByUser,
+  updateFolder,
+  deleteFolder,
+  moveSessionToFolder,
+  toggleFavorite,
+  updateSessionVisibility,
+
+  // User & Auth
+  createUser,
+  getUserByEmail,
+  getUserById,
+  getUserByGoogleId,
+  getUserByLinkedinId,
+  updateUser,
+  createAuthToken,
+  getValidAuthToken,
+  markAuthTokenUsed,
 };
