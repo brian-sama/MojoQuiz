@@ -24,6 +24,7 @@ import { aiService } from './services/aiService.js';
 import authRoutes from './routes/auth.js';
 import libraryRoutes from './routes/library.js';
 import analyticsRoutes from './routes/analytics.js';
+import { authenticate, AuthRequest } from './middleware/auth.js';
 
 dotenv.config();
 

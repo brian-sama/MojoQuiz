@@ -70,8 +70,11 @@ export const api = {
 
     // Sessions
     async createSession(title: string, mode: string, presenterId: string, user_id?: string) {
-        const response = await this.post('sessions', { title, mode, presenterId, user_id });
-        return response.data;
+        return this.post('sessions', { title, mode, presenterId, user_id });
+    },
+
+    async getSessions() {
+        return this.request('library');
     },
 
     async validateSession(code: string) {

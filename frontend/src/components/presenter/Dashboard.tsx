@@ -56,106 +56,110 @@ function PresenterDashboard() {
                             Start a live engagement session for your audience
                         </p>
                     </div>
-                    {user && (
-                        <div className="flex items-center gap-md">
-                            <div className="text-right">
-                                <p className="font-bold">{user.displayName}</p>
-                                <button onClick={logout} className="link text-sm">Logout</button>
+                    <div className="flex items-center gap-md">
+                        <Link to="/library" className="btn btn-secondary py-xs px-sm text-sm">
+                            View Library
+                        </Link>
+                        {user && (
+                            <div className="flex items-center gap-md">
+                                <div className="text-right">
+                                    <p className="font-bold">{user.displayName}</p>
+                                    <button onClick={logout} className="link text-sm">Logout</button>
+                                </div>
+                                {user.avatarUrl && (
+                                    <img src={user.avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full" />
+                                )}
                             </div>
-                            {user.avatarUrl && (
-                                <img src={user.avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full" />
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <form onSubmit={handleCreateSession} className="card">
-                    <div className="mb-lg">
-                        <label htmlFor="session-title" className="form-label">
-                            Session Title
-                        </label>
-                        <input
-                            id="session-title"
-                            type="text"
-                            className="input"
-                            placeholder="e.g., Team Meeting Feedback"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            maxLength={100}
-                            autoFocus
-                        />
+                        )}
                     </div>
 
-                    <div className="mb-lg">
-                        <label className="form-label">
-                            Session Mode
-                        </label>
-                        <div className="flex gap-sm flex-wrap">
-                            <ModeButton
-                                selected={mode === 'mentimeter'}
-                                onClick={() => setMode('mentimeter')}
-                                icon=""
-                                label="Engagement"
-                                description="Polls, Word Clouds, Scale"
-                            />
-                            <ModeButton
-                                selected={mode === 'kahoot'}
-                                onClick={() => setMode('kahoot')}
-                                icon=""
-                                label="Quiz"
-                                description="Timed Questions, Leaderboard"
+                    <form onSubmit={handleCreateSession} className="card">
+                        <div className="mb-lg">
+                            <label htmlFor="session-title" className="form-label">
+                                Session Title
+                            </label>
+                            <input
+                                id="session-title"
+                                type="text"
+                                className="input"
+                                placeholder="e.g., Team Meeting Feedback"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                maxLength={100}
+                                autoFocus
                             />
                         </div>
+
+                        <div className="mb-lg">
+                            <label className="form-label">
+                                Session Mode
+                            </label>
+                            <div className="flex gap-sm flex-wrap">
+                                <ModeButton
+                                    selected={mode === 'mentimeter'}
+                                    onClick={() => setMode('mentimeter')}
+                                    icon=""
+                                    label="Engagement"
+                                    description="Polls, Word Clouds, Scale"
+                                />
+                                <ModeButton
+                                    selected={mode === 'kahoot'}
+                                    onClick={() => setMode('kahoot')}
+                                    icon=""
+                                    label="Quiz"
+                                    description="Timed Questions, Leaderboard"
+                                />
+                            </div>
+                        </div>
+
+                        {error && (
+                            <p className="error-text text-center mb-md">
+                                {error}
+                            </p>
+                        )}
+
+                        <button
+                            type="submit"
+                            className="btn btn-primary btn-large btn-block"
+                            disabled={loading || !title.trim()}
+                        >
+                            {loading ? 'Creating...' : 'Create Session'}
+                        </button>
+                    </form>
+
+                    <div className="text-center mt-xl">
+                        <button
+                            onClick={() => navigate('/')}
+                            className="btn btn-secondary"
+                        >
+                            Join as participant
+                        </button>
                     </div>
-
-                    {error && (
-                        <p className="error-text text-center mb-md">
-                            {error}
-                        </p>
-                    )}
-
-                    <button
-                        type="submit"
-                        className="btn btn-primary btn-large btn-block"
-                        disabled={loading || !title.trim()}
-                    >
-                        {loading ? 'Creating...' : 'Create Session'}
-                    </button>
-                </form>
-
-                <div className="text-center mt-xl">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="btn btn-secondary"
-                    >
-                        Join as participant
-                    </button>
                 </div>
             </div>
-        </div>
-    );
+            );
 }
 
-interface ModeButtonProps {
-    selected: boolean;
+            interface ModeButtonProps {
+                selected: boolean;
     onClick: () => void;
-    icon: string;
-    label: string;
-    description: string;
+            icon: string;
+            label: string;
+            description: string;
 }
 
-function ModeButton({ selected, onClick, icon, label, description }: ModeButtonProps) {
+            function ModeButton({selected, onClick, icon, label, description}: ModeButtonProps) {
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`mode-button ${selected ? 'mode-button-selected' : ''}`}
-        >
-            <span className="mode-button-icon">{icon}</span>
-            <p className="mode-button-label">{label}</p>
-            <p className="mode-button-desc">{description}</p>
-        </button>
-    );
+            <button
+                type="button"
+                onClick={onClick}
+                className={`mode-button ${selected ? 'mode-button-selected' : ''}`}
+            >
+                <span className="mode-button-icon">{icon}</span>
+                <p className="mode-button-label">{label}</p>
+                <p className="mode-button-desc">{description}</p>
+            </button>
+            );
 }
 
-export default PresenterDashboard;
+            export default PresenterDashboard;

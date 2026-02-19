@@ -86,7 +86,7 @@ function HostSession() {
             setLoading(false);
         } catch (err) {
             console.error('Failed to load session:', err);
-            navigate('/host');
+            navigate('/library');
         }
     };
 
@@ -283,7 +283,7 @@ function HostSession() {
     const endSession = useCallback(() => {
         if (window.confirm('Are you sure you want to end this session?')) {
             emit('end_session');
-            navigate('/host');
+            navigate('/library');
         }
     }, [emit, navigate]);
 

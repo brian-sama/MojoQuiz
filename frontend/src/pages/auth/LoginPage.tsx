@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../hooks/useApi';
-import { GoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import BouncingBackground from '../../components/common/BouncingBackground';
 import { useEffect } from 'react';
@@ -22,40 +21,6 @@ const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
 
-    // Check for social login redirect codes
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-
-        if (code && !loading) {
-            handleLinkedInCallback(code);
-        }
-    }, []);
-
-    const handleLinkedInCallback = async (code: string) => {
-        setLoading(true);
-        setError('');
-        try {
-            const redirectUri = window.location.origin + window.location.pathname;
-            const response = await api.post('/auth/linkedin', { code, redirectUri });
-            login(response.token, response.user);
-            navigate('/host');
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'LinkedIn Authentication failed.');
-        } finally {
-            setLoading(false);
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-    };
-
-    const handleLinkedInSignIn = () => {
-        const clientId = '770hlec9zgu9mu';
-        const redirectUri = window.location.origin + window.location.pathname;
-        const scope = 'openid profile email';
-        const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
-        window.location.href = authUrl;
-    };
 
     // Step 1: Check if email exists
     const handleEmailContinue = async (e: React.FormEvent) => {
@@ -94,7 +59,7 @@ const LoginPage: React.FC = () => {
         try {
             const response = await api.post('/auth/login', { email, password });
             login(response.token, response.user);
-            navigate('/host');
+            navigate('/library');
         } catch (err: any) {
             setError(err.message || 'Invalid password. Please try again.');
         } finally {
@@ -116,7 +81,7 @@ const LoginPage: React.FC = () => {
                 displayName
             });
             login(response.token, response.user);
-            navigate('/host');
+            navigate('/library');
         } catch (err: any) {
             setError(err.message || 'Failed to complete registration.');
         } finally {
@@ -124,22 +89,6 @@ const LoginPage: React.FC = () => {
         }
     };
 
-    // Google Auth Handler
-    const handleGoogleSuccess = async (credentialResponse: any) => {
-        setError('');
-        setLoading(true);
-        try {
-            const response = await api.post('/auth/google', {
-                credential: credentialResponse.credential
-            });
-            login(response.token, response.user);
-            navigate('/host');
-        } catch (err: any) {
-            setError(err.message || 'Google Authentication failed.');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const resetFlow = () => {
         setStep('email');
@@ -216,35 +165,6 @@ const LoginPage: React.FC = () => {
                                 </p>
                             </div>
 
-                            <div className="social-divider">
-                                <span>Or continue with</span>
-                            </div>
-
-                            <div className="social-icons-row">
-                                <div className="google-login-wrapper">
-                                    <GoogleLogin
-                                        onSuccess={handleGoogleSuccess}
-                                        onError={() => setError('Google Login Failed')}
-                                        useOneTap
-                                        type="icon"
-                                        shape="circle"
-                                        theme="filled_blue"
-                                        size="large"
-                                    />
-                                </div>
-
-                                <button
-                                    type="button"
-                                    className="social-icon-btn"
-                                    title="Sign up with LinkedIn"
-                                    onClick={handleLinkedInSignIn}
-                                    disabled={loading}
-                                >
-                                    <svg viewBox="0 0 24 24" fill="#0077b5">
-                                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                                    </svg>
-                                </button>
-                            </div>
                         </motion.form>
                     )}
 

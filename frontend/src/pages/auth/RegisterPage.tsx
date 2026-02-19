@@ -28,7 +28,7 @@ const RegisterPage: React.FC = () => {
                 displayName
             });
             login(response.token, response.user);
-            navigate('/host');
+            navigate('/library');
         } catch (err: any) {
             setError(err.message || 'Registration failed. Please try again.');
         } finally {
