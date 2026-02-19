@@ -74,14 +74,14 @@ const LoginPage: React.FC = () => {
                 setMessage(`Verification code sent to ${email}`);
                 setStep('verify');
             } catch (err: any) {
-                if (err.response?.data?.error === 'User already exists') {
+                if (err.message === 'User already exists') {
                     setStep('login');
                 } else {
                     throw err;
                 }
             }
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Something went wrong. Please try again.');
+            setError(err.message || 'Something went wrong. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -98,7 +98,7 @@ const LoginPage: React.FC = () => {
             login(response.data.token, response.data.user);
             navigate('/host');
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Invalid password. Please try again.');
+            setError(err.message || 'Invalid password. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -131,7 +131,7 @@ const LoginPage: React.FC = () => {
             login(response.data.token, response.data.user);
             navigate('/host');
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to complete registration.');
+            setError(err.message || 'Failed to complete registration.');
         } finally {
             setLoading(false);
         }
@@ -148,7 +148,7 @@ const LoginPage: React.FC = () => {
             login(response.data.token, response.data.user);
             navigate('/host');
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Google Authentication failed.');
+            setError(err.message || 'Google Authentication failed.');
         } finally {
             setLoading(false);
         }
