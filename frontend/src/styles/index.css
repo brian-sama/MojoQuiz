@@ -152,12 +152,6 @@ body {
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   background: var(--color-bg);
-  background-image:
-    linear-gradient(var(--glass-bg), var(--glass-bg)),
-    url('../assets/background_srhr.jpg');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
   color: var(--color-text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
