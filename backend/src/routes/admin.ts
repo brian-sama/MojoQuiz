@@ -3,7 +3,7 @@ import { authorize } from '../middleware/rbac.js';
 import db from '../services/database.js';
 import logger from '../utils/logger.js';
 
-const router: Router = express.Router();
+const router: Router = Router();
 
 /**
  * GET /api/admin/users

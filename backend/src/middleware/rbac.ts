@@ -44,9 +44,26 @@ export const requireRole = (allowedRoles: string[]) => {
 };
 
 /**
+ * Middleware: require the user has one of the specified roles (exact match)
+ */
+export const authorize = (roles: string[]) => {
+    return (async (req: Request, res: Response, next: NextFunction) => {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        next();
+    }) as any;
+};
+
+/**
  * Middleware: require the user belongs to an organization
  */
-export const requireOrg = async (req: Request, res: Response, next: NextFunction) => {
+export const requireOrg = (async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
     }
@@ -56,14 +73,14 @@ export const requireOrg = async (req: Request, res: Response, next: NextFunction
     }
 
     next();
-};
+}) as any;
 
 /**
  * Legacy authorize middleware — kept for backward compatibility with existing routes.
  * Combines authentication + role check in one middleware.
  */
-export const authorize = (allowedRoles: string[] = []) => {
-    return async (req: Request, res: Response, next: NextFunction) => {
+export const authorizeLegacy = (allowedRoles: string[] = []) => {
+    return (async (req: Request, res: Response, next: NextFunction) => {
         try {
             const authHeader = req.headers.authorization;
             if (!authHeader?.startsWith('Bearer ')) {
@@ -102,5 +119,5 @@ export const authorize = (allowedRoles: string[] = []) => {
             }
             return res.status(401).json({ error: 'Invalid token' });
         }
-    };
+    }) as any;
 };

@@ -108,14 +108,14 @@ export class SessionController {
             // Duplicate questions
             const questions = await db.getQuestionsBySession(sessionId);
             for (const q of questions) {
-                await db.createQuestion(
-                    newSession.id,
-                    q.question_text,
-                    q.question_type,
-                    q.options,
-                    q.correct_answer,
-                    q.time_limit
-                );
+                await db.createQuestion({
+                    session_id: newSession.id,
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    options: q.options,
+                    correct_answer: q.correct_answer,
+                    time_limit: q.time_limit
+                });
             }
 
             res.status(201).json({

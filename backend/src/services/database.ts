@@ -20,7 +20,7 @@ import type {
   AuthToken,
   RefreshToken
 } from '../types/index.js';
-import { QuestionType } from '@prisma/client';
+export type QuestionType = 'poll' | 'quiz_mc' | 'scale' | 'nps' | 'brainstorm' | 'word_cloud';
 import logger from '../utils/logger.js';
 
 // Initialize PostgreSQL Pool

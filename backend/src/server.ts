@@ -54,7 +54,7 @@ async function setupRedisAdapter() {
         io.adapter(createAdapter(pubClient, subClient));
         logger.info('✅ Socket.IO Redis adapter connected and enabled.');
     } catch (error) {
-        logger.error('❌ Failed to connect to Redis for Socket.IO adapter:', error);
+        logger.error({ error }, '❌ Failed to connect to Redis for Socket.IO adapter:');
     }
 }
 

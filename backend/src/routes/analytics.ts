@@ -1,17 +1,17 @@
-import express, { Router, Response } from 'express';
+import { Request, Response, Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import db from '../services/database.js';
 import { EngagementService } from '../services/EngagementService.js';
 import { ExportService } from '../services/ExportService.js';
 import logger from '../utils/logger.js';
 
-const router: Router = express.Router();
+const router: Router = Router();
 
 /**
  * GET /api/analytics/dashboard
  * Dashboard summary stats for the logged-in user
  */
-router.get('/dashboard', authenticate, async (req: Request, res: Response) => {
+router.get('/dashboard', authenticate, (async (req: Request, res: Response) => {
     try {
         const stats = await db.getDashboardStats(req.user!.id);
         res.json(stats);
@@ -19,13 +19,13 @@ router.get('/dashboard', authenticate, async (req: Request, res: Response) => {
         logger.error({ error }, 'Error fetching dashboard stats');
         res.status(500).json({ error: 'Failed to fetch dashboard stats' });
     }
-});
+}) as any);
 
 /**
  * GET /api/analytics/:sessionId
  * Full analytics report for a session
  */
-router.get('/:sessionId', authenticate, async (req: Request, res: Response) => {
+router.get('/:sessionId', authenticate, (async (req: Request, res: Response) => {
     try {
         const { sessionId } = req.params;
 
@@ -78,13 +78,13 @@ router.get('/:sessionId', authenticate, async (req: Request, res: Response) => {
         logger.error({ error }, 'Error fetching session analytics');
         res.status(500).json({ error: 'Failed to load report' });
     }
-});
+}) as any);
 
 /**
  * GET /api/analytics/:sessionId/export?format=csv|json
  * Export session data
  */
-router.get('/:sessionId/export', authenticate, async (req: Request, res: Response) => {
+router.get('/:sessionId/export', authenticate, (async (req: Request, res: Response) => {
     try {
         const { sessionId } = req.params;
         const { format = 'json' } = req.query;
@@ -108,6 +108,6 @@ router.get('/:sessionId/export', authenticate, async (req: Request, res: Respons
         logger.error({ error }, 'Export error');
         res.status(500).json({ error: 'Failed to export' });
     }
-});
+}) as any);
 
 export default router;

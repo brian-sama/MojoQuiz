@@ -5,6 +5,7 @@ import db from '../services/database.js';
 import { TokenService } from '../services/TokenService.js';
 import { emailService } from '../services/emailService.js';
 import { sanitizeInput } from '../utils/helpers.js';
+import { authenticate } from '../middleware/auth.js';
 import { authorize } from '../middleware/rbac.js';
 import logger from '../utils/logger.js';
 
@@ -251,7 +252,7 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 /**
  * Get Me (current user profile)
  */
-router.get('/me', authorize(), async (req: Request, res: Response) => {
+router.get('/me', authenticate, async (req: Request, res: Response) => {
     try {
         const user = await db.getUserById(req.user!.id);
         if (!user) return res.status(404).json({ error: 'User not found' });

@@ -1,13 +1,16 @@
-import { User } from './index.js';
+import { User as AppUser } from './index.js';
 
-declare module 'express-serve-static-core' {
-    interface Request {
-        user?: {
+declare global {
+    namespace Express {
+        interface User {
             id: string;
             email: string;
             role: string;
             organizationId: string | null;
-        };
+        }
+        interface Request {
+            user?: User;
+        }
     }
 }
 
