@@ -26,13 +26,19 @@ const Skeleton: React.FC<SkeletonProps> = ({
 }) => {
     const skeletonClass = `skeleton skeleton-${variant} ${className}`;
 
-    const inlineStyle: React.CSSProperties = {
-        ...style,
-        width: width ?? undefined,
-        height: height ?? undefined,
-    };
+    // Use CSS variables for dynamic dimensions to avoid inline style warnings
+    const cssVars = {
+        '--skeleton-width': typeof width === 'number' ? `${width}px` : width,
+        '--skeleton-height': typeof height === 'number' ? `${height}px` : height,
+    } as React.CSSProperties;
 
-    return <div className={skeletonClass} style={inlineStyle} aria-hidden="true" />;
+    return (
+        <div
+            className={skeletonClass}
+            style={{ ...cssVars, ...style }}
+            aria-hidden="true"
+        />
+    );
 };
 
 export default Skeleton;

@@ -44,7 +44,7 @@ export class QuestionController {
 
             const question = await db.createQuestion({
                 session_id: sessionId,
-                question_type: questionType,
+                question_type: questionType as any,
                 question_text: sanitizeInput(questionText, 1000),
                 options: options || null,
                 settings: settings || {},

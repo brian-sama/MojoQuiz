@@ -159,7 +159,7 @@ function CreateSession() {
                                         onClick={() => setMode(m.value)}
                                         className={`mode-card ${mode === m.value ? 'mode-card-active' : ''}`}
                                     >
-                                        <div style={{ fontSize: '1.5rem' }} className="mb-xs">{m.icon}</div>
+                                        <div className="text-2xl mb-xs">{m.icon}</div>
                                         <div className="text-bold text-sm">{m.label}</div>
                                         <div className="text-xs text-muted mt-xs">{m.desc}</div>
                                     </button>
@@ -185,9 +185,9 @@ function CreateSession() {
                                         <div className="flex items-center gap-sm">
                                             <span className="text-muted text-xs text-bold">Q{i + 1}</span>
                                             <span className="text-sm">{q.question_text}</span>
-                                            <span className="status-badge status-badge-draft" style={{ fontSize: '10px' }}>{q.question_type}</span>
+                                            <span className="status-badge status-badge-draft text-tiny">{q.question_type}</span>
                                         </div>
-                                        <button className="btn btn-danger btn-small" onClick={() => removeQuestion(q.id)} style={{ padding: '2px 8px' }}>
+                                        <button className="btn btn-danger btn-small btn-tiny" onClick={() => removeQuestion(q.id)}>
                                             ×
                                         </button>
                                     </div>
@@ -198,10 +198,10 @@ function CreateSession() {
                         {/* Add question form */}
                         <div className="flex gap-sm">
                             <select
-                                className="input"
+                                className="input w-120 flex-shrink-0"
                                 value={newQuestionType}
                                 onChange={(e) => setNewQuestionType(e.target.value)}
-                                style={{ width: 120, flexShrink: 0 }}
+                                title="Select Question Type"
                             >
                                 <option value="poll">Poll</option>
                                 <option value="quiz_mc">Quiz MC</option>
@@ -263,7 +263,7 @@ function CreateSession() {
                         </p>
 
                         {error && (
-                            <p className="mb-md" style={{ color: 'var(--color-error)' }}>{error}</p>
+                            <p className="mb-md text-error">{error}</p>
                         )}
 
                         <div className="flex gap-md justify-center">

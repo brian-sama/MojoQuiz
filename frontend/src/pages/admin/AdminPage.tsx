@@ -107,10 +107,10 @@ const AdminPage: React.FC = () => {
                                         <td className="p-md text-sm text-secondary">{user.email}</td>
                                         <td className="p-md">
                                             <select
-                                                className="input text-sm p-xs"
+                                                className="input text-sm p-xs w-auto"
                                                 value={user.role}
                                                 onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                                style={{ width: 'auto' }}
+                                                title="Change User Role"
                                             >
                                                 <option value="owner">Owner</option>
                                                 <option value="admin">Admin</option>

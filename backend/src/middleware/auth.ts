@@ -3,22 +3,14 @@ import { TokenService } from '../services/TokenService.js';
 import db from '../services/database.js';
 import logger from '../utils/logger.js';
 
-export interface AuthRequest extends Request {
-    user?: {
-        id: string;
-        email: string;
-        role: string;
-        organizationId: string | null;
-    };
-}
+// AuthRequest interface removed in favor of global Express declaration in src/types/express.d.ts
 
 /**
  * Auth Middleware
  * Verifies JWT access token and attaches full user info to request
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
-    const authReq = req as AuthRequest;
-    const authHeader = authReq.headers.authorization;
+    const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Access denied. No token provided.' });
@@ -34,11 +26,11 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
             return res.status(401).json({ error: 'Invalid token. User not found.' });
         }
 
-        authReq.user = {
+        req.user = {
             id: user.id,
             email: user.email,
             role: user.role,
-            organizationId: user.organization_id ?? null,
+            organizationId: user.organizationId ?? null,
         };
         next();
     } catch (error) {

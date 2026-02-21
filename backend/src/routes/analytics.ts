@@ -1,5 +1,5 @@
 import express, { Router, Response } from 'express';
-import { authenticate, AuthRequest } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import db from '../services/database.js';
 import { EngagementService } from '../services/EngagementService.js';
 import { ExportService } from '../services/ExportService.js';
@@ -11,7 +11,7 @@ const router: Router = express.Router();
  * GET /api/analytics/dashboard
  * Dashboard summary stats for the logged-in user
  */
-router.get('/dashboard', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/dashboard', authenticate, async (req: Request, res: Response) => {
     try {
         const stats = await db.getDashboardStats(req.user!.id);
         res.json(stats);
@@ -25,7 +25,7 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res: Response) =
  * GET /api/analytics/:sessionId
  * Full analytics report for a session
  */
-router.get('/:sessionId', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:sessionId', authenticate, async (req: Request, res: Response) => {
     try {
         const { sessionId } = req.params;
 
@@ -84,7 +84,7 @@ router.get('/:sessionId', authenticate, async (req: AuthRequest, res: Response) 
  * GET /api/analytics/:sessionId/export?format=csv|json
  * Export session data
  */
-router.get('/:sessionId/export', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:sessionId/export', authenticate, async (req: Request, res: Response) => {
     try {
         const { sessionId } = req.params;
         const { format = 'json' } = req.query;

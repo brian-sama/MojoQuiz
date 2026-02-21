@@ -79,7 +79,7 @@ export class EngagementService {
                 generatedAt: new Date().toISOString()
             };
         } catch (error) {
-            logger.error(`Error calculating session analytics for ${sessionId}:`, error);
+            logger.error({ error }, `Error getting engagement stats for session ${sessionId}:`);
             throw error;
         }
     }

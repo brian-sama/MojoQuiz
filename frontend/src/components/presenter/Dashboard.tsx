@@ -141,8 +141,8 @@ function Dashboard() {
 
             {/* Error */}
             {error && (
-                <div className="card mb-md" style={{ borderColor: 'var(--color-error)' }}>
-                    <p style={{ color: 'var(--color-error)' }}>{error}</p>
+                <div className="card mb-md border-error">
+                    <p className="text-error">{error}</p>
                     <button className="btn btn-secondary btn-small mt-sm" onClick={loadDashboard}>
                         Retry
                     </button>
@@ -178,7 +178,7 @@ function Dashboard() {
                                     {session.join_code && (
                                         <>
                                             <span>•</span>
-                                            <span className="text-bold" style={{ fontFamily: 'monospace' }}>{session.join_code}</span>
+                                            <span className="text-bold font-mono">{session.join_code}</span>
                                         </>
                                     )}
                                 </div>

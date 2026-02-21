@@ -326,7 +326,8 @@ export interface User {
     auth_provider: 'email' | 'google' | 'linkedin';
     google_id: string | null;
     linkedin_id: string | null;
-    role: 'user' | 'admin';
+    role: 'owner' | 'admin' | 'presenter' | 'analyst' | 'user';
+    organizationId: string | null;
     is_verified: boolean;
     created_at: Date;
     last_login_at: Date | null;
@@ -341,4 +342,13 @@ export interface AuthToken {
     expires_at: Date;
     used_at: Date | null;
     created_at: Date;
+}
+
+export interface RefreshToken {
+    id: string;
+    user_id: string;
+    token: string;
+    expires_at: Date;
+    created_at: Date;
+    revoked_at: Date | null;
 }

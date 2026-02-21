@@ -133,7 +133,7 @@ export function initializeSocketHandlers(io: Server): void {
                 logger.info(`Participant ${participant.id} joined session ${session.id}`);
 
             } catch (error) {
-                logger.error('Error joining session:', error);
+                logger.error({ error }, 'Error joining session:');
                 socket.emit('error', {
                     code: 'JOIN_ERROR',
                     message: 'Failed to join session',
@@ -190,7 +190,7 @@ export function initializeSocketHandlers(io: Server): void {
                 logger.info(`Presenter joined session ${session_id}`);
 
             } catch (error) {
-                logger.error('Error presenter join:', error);
+                logger.error({ error }, 'Error presenter join:');
                 socket.emit('error', { code: 'JOIN_ERROR', message: 'Failed to join' });
             }
         });
@@ -328,7 +328,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error submitting response:', error);
+                logger.error({ error }, 'Error submitting response:');
                 socket.emit('error', { code: 'SUBMIT_ERROR', message: 'Failed to submit response' });
             }
         });
@@ -379,7 +379,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error submitting words:', error);
+                logger.error({ error }, 'Error submitting words:');
                 socket.emit('error', { code: 'SUBMIT_ERROR', message: 'Failed to submit words' });
             }
         });
@@ -429,7 +429,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error submitting text:', error);
+                logger.error({ error }, 'Error submitting text:');
                 socket.emit('error', { code: 'SUBMIT_ERROR', message: 'Failed to submit text' });
             }
         });
@@ -463,7 +463,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error activating question:', error);
+                logger.error({ error }, 'Error activating question:');
                 socket.emit('error', { code: 'ACTIVATE_ERROR', message: 'Failed to activate' });
             }
         });
@@ -489,7 +489,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error locking question:', error);
+                logger.error({ error }, 'Error locking question:');
             }
         });
 
@@ -554,7 +554,7 @@ export function initializeSocketHandlers(io: Server): void {
                 }
 
             } catch (error) {
-                logger.error('Error showing results:', error);
+                logger.error({ error }, 'Error showing results:');
             }
         });
 
@@ -574,7 +574,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error removing participant:', error);
+                logger.error({ error }, 'Error removing participant:');
             }
         });
 
@@ -592,7 +592,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error ending session:', error);
+                logger.error({ error }, 'Error ending session:');
             }
         });
 
@@ -641,7 +641,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error submitting idea:', error);
+                logger.error({ error }, 'Error submitting idea:');
                 socket.emit('error', { code: 'SUBMIT_ERROR', message: 'Failed to submit idea' });
             }
         });
@@ -670,7 +670,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
             } catch (error) {
-                logger.error('Error voting on idea:', error);
+                logger.error({ error }, 'Error voting on idea:');
                 socket.emit('error', { code: 'VOTE_ERROR', message: 'Failed to vote' });
             }
         });
@@ -694,7 +694,7 @@ export function initializeSocketHandlers(io: Server): void {
                     });
                 }
             } catch (error) {
-                logger.error('Error handling disconnect:', error);
+                logger.error({ error }, 'Error handling disconnect:');
             }
         });
     });

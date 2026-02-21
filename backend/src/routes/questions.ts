@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { Router } from 'express';
 import { QuestionController } from '../controllers/QuestionController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 // Session-specific question routes
 // These are currently mounted under /api/sessions in app.ts, 

@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { Router } from 'express';
 import { SessionController } from '../controllers/SessionController.js';
 
-const router = express.Router();
+const router: Router = Router();
 
 router.post('/', SessionController.create);
 router.get('/:idOrCode', SessionController.getOne);

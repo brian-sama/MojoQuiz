@@ -186,6 +186,155 @@
     gap: var(--space-3);
 }
 
+/* Wizard Specifics */
+.wizard-step {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.wizard-footer {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--spacing-lg);
+}
+
+/* Grid / Responsive Utilities */
+.grid {
+    display: grid;
+}
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.gap-xl {
+    gap: var(--spacing-xl);
+}
+
+/* Landing Page Specifics */
+.landing-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.landing-hero-text {
+    font-size: 3.5rem;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.max-w-xl {
+    max-width: 1140px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.max-w-sm {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge-completed {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+.status-badge-active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.status-badge-draft {
+    background: var(--color-muted);
+    color: var(--color-text-secondary);
+}
+
+/* Utility Classes */
+.w-auto {
+    width: auto;
+}
+
+.w-120 {
+    width: 120px;
+}
+
+.flex-shrink-0 {
+    flex-shrink: 0;
+}
+
+.text-2xl {
+    font-size: 1.5rem;
+}
+
+.text-tiny {
+    font-size: 10px;
+}
+
+.btn-tiny {
+    padding: 2px 8px;
+}
+
+.border-error {
+    border: 1px solid var(--color-error);
+}
+
+.border-primary {
+    border: 1px solid var(--color-primary);
+}
+
+.font-mono {
+    font-family: 'monospace';
+}
+
+.opacity-80 {
+    opacity: 0.8;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.gap-xs {
+    gap: var(--spacing-xs);
+}
+
+/* Skeleton Variables */
+.skeleton {
+    width: var(--skeleton-width, auto);
+    height: var(--skeleton-height, auto);
+}
+
+.h-320 {
+    height: 320px;
+}
+
+.text-xl-bold {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+}
+
+.border-error {
+    border: 1px solid var(--color-error);
+}
+
+.text-error {
+    color: var(--color-error);
+}
+
+
 /* Stat Cards */
 .stat-cards {
     display: grid;

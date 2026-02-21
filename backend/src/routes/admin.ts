@@ -1,6 +1,6 @@
-import express, { Router, Response } from 'express';
+import { Request, Response, Router } from 'express';
+import { authorize } from '../middleware/rbac.js';
 import db from '../services/database.js';
-import { authorize, type AuthRequest } from '../middleware/rbac.js';
 import logger from '../utils/logger.js';
 
 const router: Router = express.Router();
@@ -9,7 +9,7 @@ const router: Router = express.Router();
  * GET /api/admin/users
  * List all users in the organization (or all if platform owner)
  */
-router.get('/users', authorize(['admin', 'owner']), async (req: AuthRequest, res: Response) => {
+router.get('/users', authorize(['admin', 'owner']), (async (req: Request, res: Response) => {
     try {
         const organizationId = req.user!.role === 'owner' ? undefined : req.user!.organizationId;
 
@@ -21,20 +21,20 @@ router.get('/users', authorize(['admin', 'owner']), async (req: AuthRequest, res
             email: u.email,
             displayName: u.display_name,
             role: u.role,
-            organizationId: u.organization_id,
+            organizationId: u.organizationId,
             lastLoginAt: u.last_login_at
         })));
     } catch (error) {
         logger.error({ error }, 'Admin: failed to fetch users');
         res.status(500).json({ error: 'Failed to fetch users' });
     }
-});
+}));
 
 /**
  * PATCH /api/admin/users/:userId/role
  * Update a user's role
  */
-router.patch('/users/:userId/role', authorize(['admin', 'owner']), async (req: AuthRequest, res: Response) => {
+router.patch('/users/:userId/role', authorize(['admin', 'owner']), (async (req: Request, res: Response) => {
     const { userId } = req.params;
     const { role } = req.body;
 
@@ -48,7 +48,7 @@ router.patch('/users/:userId/role', authorize(['admin', 'owner']), async (req: A
         if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
         // Admin can only manage users in their own org
-        if (req.user!.role === 'admin' && targetUser.organization_id !== req.user!.organizationId) {
+        if (req.user!.role === 'admin' && targetUser.organizationId !== req.user!.organizationId) {
             return res.status(403).json({ error: 'Can only manage users within your organization' });
         }
 
@@ -70,13 +70,13 @@ router.patch('/users/:userId/role', authorize(['admin', 'owner']), async (req: A
         logger.error({ error, userId }, 'Admin: failed to update role');
         res.status(500).json({ error: 'Failed to update user role' });
     }
-});
+}));
 
 /**
  * GET /api/admin/audit-logs
  * Fetch recent audit logs
  */
-router.get('/audit-logs', authorize(['admin', 'owner']), async (req: AuthRequest, res: Response) => {
+router.get('/audit-logs', authorize(['admin', 'owner']), (async (req: Request, res: Response) => {
     try {
         const organizationId = req.user!.role === 'owner' ? undefined : req.user!.organizationId;
 
@@ -88,6 +88,6 @@ router.get('/audit-logs', authorize(['admin', 'owner']), async (req: AuthRequest
         logger.error({ error }, 'Admin: failed to fetch audit logs');
         res.status(500).json({ error: 'Failed to fetch audit logs' });
     }
-});
+}));
 
 export default router;

@@ -49,8 +49,8 @@ const LandingPage: React.FC = () => {
                             Turn passive listeners into active participants.
                         </p>
 
-                        <div className="card p-xl shadow-lg mx-auto" style={{ maxWidth: 480 }}>
-                            <h2 className="text-bold mb-md">Got a Join Code?</h2>
+                        <div className="card p-xl shadow-lg mx-auto max-w-sm">
+                            <h1 className="text-xl-bold mb-md">MojoQuiz</h1>
                             <form onSubmit={handleJoin} className="flex gap-sm">
                                 <input
                                     type="text"

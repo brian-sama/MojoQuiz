@@ -18,13 +18,7 @@ export const errorHandler = (err: any, req: Request, res: Response, _next: NextF
     const message = err.message || 'Internal Server Error';
 
     // Log the error
-    logger.error({
-        method: req.method,
-        url: req.url,
-        status: statusCode,
-        message: message,
-        stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-    }, 'Unhandled error caught by global handler');
+    logger.error({ error: err }, 'Unhandled Error:');
 
     res.status(statusCode).json({
         error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : message,

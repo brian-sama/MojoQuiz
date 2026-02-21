@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
+import { Redis } from 'ioredis';
 import { EngagementService } from './EngagementService.js';
 import { aiService } from './aiService.js';
 import logger from '../utils/logger.js';
@@ -7,7 +7,7 @@ import db from './database.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-const connection = new IORedis(REDIS_URL, {
+const connection = new Redis(REDIS_URL, {
     maxRetriesPerRequest: null,
 });
 
@@ -40,12 +40,16 @@ export const analyticsWorker = new Worker('analytics-queue', async (job: Job) =>
             throw error;
         }
     }
-}, { connection });
+}, { connection: connection as any });
 
 analyticsWorker.on('completed', (job) => {
     logger.info({ jobId: job.id, sessionId: job.data.sessionId }, 'Job completed successfully');
 });
 
-analyticsWorker.on('failed', (job, err) => {
-    logger.error({ jobId: job?.id, error: err.message }, 'Job failed');
+analyticsWorker.on('error', error => {
+    logger.error({ error }, 'Worker error:');
+});
+
+analyticsWorker.on('failed', (job, error) => {
+    logger.error({ error, jobId: job?.id }, 'Job failed:');
 });

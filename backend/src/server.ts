@@ -114,7 +114,7 @@ class SessionExpirationManager {
                 logger.info(`⏰ Expired ${expiredCount} session(s)`);
             }
         } catch (error) {
-            logger.error('Error checking expired sessions:', error);
+            logger.error({ error }, 'Error checking expired sessions:');
         }
     }
 }
@@ -143,8 +143,8 @@ async function bootstrap() {
     });
 }
 
-bootstrap().catch(err => {
-    logger.fatal('Failed to bootstrap server:', err);
+bootstrap().catch(error => {
+    logger.fatal({ error }, 'Failed to bootstrap server:');
     process.exit(1);
 });
 

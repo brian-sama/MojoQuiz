@@ -1,5 +1,4 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from './auth.js';
+import { Request, Response, NextFunction } from 'express';
 import db from '../services/database.js';
 import logger from '../utils/logger.js';
 
@@ -19,7 +18,7 @@ const ROLE_HIERARCHY: Record<string, number> = {
  * Middleware: require the user has one of the specified roles (or higher in hierarchy)
  */
 export const requireRole = (allowedRoles: string[]) => {
-    return async (req: AuthRequest, res: Response, next: NextFunction) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ error: 'Authentication required' });
         }
@@ -47,7 +46,7 @@ export const requireRole = (allowedRoles: string[]) => {
 /**
  * Middleware: require the user belongs to an organization
  */
-export const requireOrg = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const requireOrg = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
     }
@@ -64,7 +63,7 @@ export const requireOrg = async (req: AuthRequest, res: Response, next: NextFunc
  * Combines authentication + role check in one middleware.
  */
 export const authorize = (allowedRoles: string[] = []) => {
-    return async (req: AuthRequest, res: Response, next: NextFunction) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
         try {
             const authHeader = req.headers.authorization;
             if (!authHeader?.startsWith('Bearer ')) {
@@ -84,7 +83,7 @@ export const authorize = (allowedRoles: string[] = []) => {
                 id: user.id,
                 email: user.email,
                 role: user.role,
-                organizationId: user.organization_id ?? null,
+                organizationId: user.organizationId ?? null,
             };
 
             if (allowedRoles.length > 0) {

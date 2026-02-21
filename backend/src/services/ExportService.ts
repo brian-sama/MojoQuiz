@@ -34,7 +34,7 @@ export class ExportService {
 
             return header + rows;
         } catch (error) {
-            logger.error({ sessionId, error }, 'Failed to generate CSV export');
+            logger.error({ error, sessionId }, 'Error exporting to CSV:');
             throw error;
         }
     }

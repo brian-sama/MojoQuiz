@@ -17,12 +17,16 @@ import type {
   WordCloudWord,
   LeaderboardEntry,
   User,
-  AuthToken
+  AuthToken,
+  RefreshToken
 } from '../types/index.js';
+import { QuestionType } from '@prisma/client';
+import logger from '../utils/logger.js';
 
 // Initialize PostgreSQL Pool
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
+  logger.error('DATABASE_URL environment variable is required');
   throw new Error('DATABASE_URL environment variable is required');
 }
 
@@ -31,14 +35,45 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-/**
- * Tag function to run queries with param substitution
- */
 async function sql(strings: TemplateStringsArray, ...values: any[]) {
   const text = strings.reduce((acc, str, i) => acc + str + (i < values.length ? `$${i + 1}` : ''), '');
   const result = await pool.query(text, values);
   return result.rows;
 }
+
+/**
+ * Map DB session to camelCase interface
+ */
+function mapSession(dbSession: any): any | null {
+  if (!dbSession) return null;
+  return {
+    ...dbSession,
+    joinCode: dbSession.join_code,
+    presenterId: dbSession.presenter_id,
+    userId: dbSession.user_id,
+    expiresAt: dbSession.expires_at,
+    currentQuestionId: dbSession.current_question_id,
+  };
+}
+
+/**
+ * Map DB user to camelCase interface
+ */
+function mapUser(dbUser: any): User | null {
+  if (!dbUser) return null;
+  return {
+    ...dbUser,
+    display_name: dbUser.display_name, // Keeping snake_case for now as interface has it
+    avatar_url: dbUser.avatar_url,
+    password_hash: dbUser.password_hash,
+    auth_provider: dbUser.auth_provider,
+    google_id: dbUser.google_id,
+    linkedin_id: dbUser.linkedin_id,
+    last_login_at: dbUser.last_login_at,
+    organizationId: dbUser.organization_id || null, // Map to camelCase
+  } as User;
+}
+
 
 
 // ============================================
@@ -265,7 +300,10 @@ export async function createQuestion(question: Partial<Question>): Promise<Quest
     )
     RETURNING *
   `;
-  return result[0] as Question;
+  return {
+    ...result[0],
+    question_type: result[0].question_type as QuestionType
+  } as Question;
 }
 
 export async function getQuestionsBySession(sessionId: string): Promise<Question[]> {
@@ -554,28 +592,31 @@ export async function createUser(userData: Partial<User>): Promise<User> {
     )
     RETURNING *
   `;
-  return result[0] as User;
+  return mapUser(result[0]) as User;
 }
 
+// User retrieval functions restored and cleaned up
 export async function getUserByEmail(email: string): Promise<User | null> {
   const result = await sql`SELECT * FROM users WHERE email = ${email.toLowerCase()}`;
-  return (result[0] as User) || null;
+  return mapUser(result[0]);
 }
 
 export async function getUserById(id: string): Promise<User | null> {
   const result = await sql`SELECT * FROM users WHERE id = ${id}`;
-  return (result[0] as User) || null;
+  return mapUser(result[0]);
 }
 
 export async function getUserByGoogleId(googleId: string): Promise<User | null> {
   const result = await sql`SELECT * FROM users WHERE google_id = ${googleId}`;
-  return (result[0] as User) || null;
+  return mapUser(result[0]);
 }
 
 export async function getUserByLinkedinId(linkedinId: string): Promise<User | null> {
   const result = await sql`SELECT * FROM users WHERE linkedin_id = ${linkedinId}`;
-  return (result[0] as User) || null;
+  return mapUser(result[0]);
 }
+
+// Session operations moved to bottom implementation section
 
 export async function updateUser(id: string, updates: Partial<User>): Promise<User> {
   const fields: string[] = [];
@@ -618,7 +659,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
 
   const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${fields.length + 1} RETURNING *`;
   const result = await pool.query(query, [...values, id]);
-  return result.rows[0] as User;
+  return mapUser(result.rows[0]) as User;
 }
 
 export async function createAuthToken(tokenData: Partial<AuthToken>): Promise<AuthToken> {
@@ -949,14 +990,15 @@ export default {
   revokeRefreshTokenById,
   revokeAllUserRefreshTokens,
 
-  // Dashboard Stats
   getDashboardStats,
   getSessionStats,
 
   // Admin
   getUsers,
   getAuditLogs,
+  createAuditLog,
   getOrganizationById,
+  getSessionVoteResults,
 };
 
 // ============================================
@@ -1078,22 +1120,24 @@ export async function getSessionVoteResults(sessionId: string) {
 /**
  * Get all users, optionally filtered by organization
  */
-export async function getUsers(organizationId?: string): Promise<User[]> {
-  if (organizationId) {
+export async function getUsers(organizationId: string | null | undefined): Promise<User[]> {
+  const orgId = organizationId ?? undefined;
+  if (orgId) {
     const rows = await sql`
       SELECT * FROM users WHERE organization_id = ${organizationId} ORDER BY created_at DESC
     `;
     return rows as User[];
   }
   const rows = await sql`SELECT * FROM users ORDER BY created_at DESC`;
-  return rows as User[];
+  return rows.map(mapUser).filter(Boolean) as User[];
 }
 
 /**
  * Get recent audit logs, optionally filtered by organization
  */
-export async function getAuditLogs(organizationId?: string, limit: number = 100): Promise<any[]> {
-  if (organizationId) {
+export async function getAuditLogs(organizationId: string | null | undefined, limit: number = 100): Promise<any[]> {
+  const orgId = organizationId ?? undefined;
+  if (orgId) {
     const rows = await sql`
       SELECT al.*, u.display_name as actor_name, u.email as actor_email
       FROM audit_logs al

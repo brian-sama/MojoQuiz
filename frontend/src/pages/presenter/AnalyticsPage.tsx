@@ -157,7 +157,7 @@ const AnalyticsPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-xl mb-xl">
                 {/* Leaderboard Section */}
                 <div className="card p-lg">
-                    <h2 className="mb-md text-bold" style={{ fontSize: 'var(--font-size-xl)' }}>Leaderboard</h2>
+                    <h2 className="mb-md text-xl-bold">Leaderboard</h2>
                     <div className="flex flex-col gap-sm">
                         {participants
                             .sort((a: any, b: any) => b.total_score - a.total_score)
@@ -179,8 +179,8 @@ const AnalyticsPage: React.FC = () => {
 
                 {/* Participation Chart */}
                 <div className="card p-lg">
-                    <h2 className="mb-md text-bold" style={{ fontSize: 'var(--font-size-xl)' }}>Engagement per Question</h2>
-                    <div className="w-full" style={{ height: 320 }}>
+                    <h2 className="mb-md text-xl-bold">Engagement per Question</h2>
+                    <div className="w-full h-320">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={participationData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -203,7 +203,7 @@ const AnalyticsPage: React.FC = () => {
 
             {/* Detailed Question Breakdown */}
             <section>
-                <h2 className="mb-md text-bold" style={{ fontSize: 'var(--font-size-xl)' }}>Question Breakdown</h2>
+                <h2 className="mb-md text-xl-bold">Question Breakdown</h2>
                 <div className="flex flex-col gap-md">
                     {questions.map((q: any, idx: number) => (
                         <div key={q.id} className="card p-lg">

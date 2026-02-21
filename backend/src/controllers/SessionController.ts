@@ -102,7 +102,7 @@ export class SessionController {
                 originalSession.presenter_id,
                 originalSession.mode,
                 expiresAt,
-                originalSession.user_id
+                originalSession.user_id as string
             );
 
             // Duplicate questions
