@@ -4,21 +4,26 @@ import { useAuth } from '../../hooks/useAuth';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
+    requiredRole?: string;
 }
 
 /**
  * Protected Route Wrapper
  * Only allowed for authenticated users
  */
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+    const { isAuthenticated, loading, user } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            navigate('/login/auth');
+        if (!loading) {
+            if (!isAuthenticated) {
+                navigate('/auth/login');
+            } else if (requiredRole && user?.role !== requiredRole) {
+                navigate('/dashboard');
+            }
         }
-    }, [isAuthenticated, loading, navigate]);
+    }, [isAuthenticated, loading, navigate, requiredRole, user]);
 
     if (loading) {
         return (

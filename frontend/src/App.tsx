@@ -9,11 +9,8 @@
  * Protected routes: /dashboard, /create, /host/:id, /analytics/:id, /admin
  */
 
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-
-// Public pages
 import JoinPage from './components/participant/JoinPage';
 import PlayPage from './components/participant/PlayPage';
 import LoginPage from './components/auth/LoginPage';
