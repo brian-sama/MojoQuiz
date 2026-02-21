@@ -1,63 +1,69 @@
 /**
- * Main App Component
- * Routes between join page, participant view, and presenter dashboard
+ * App — Root Router
+ *
+ * Experience-driven flow:
+ * Login → /dashboard (Control Center) → /create (Wizard) → /host/:id (Present)
+ *       → /analytics/:id (Report) → /dashboard
+ *
+ * Public routes: /, /join, /join/:code, /play/:code, /auth/*
+ * Protected routes: /dashboard, /create, /host/:id, /analytics/:id, /admin
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import JoinPage from './components/participant/JoinPage';
-import PlayPage from './components/participant/PlayPage';
-import PresenterDashboard from './components/presenter/Dashboard';
-import HostSession from './components/presenter/HostSession';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
-import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
-import LibraryPage from './pages/presenter/LibraryPage';
+// Public pages
+import JoinPage from './components/participant/JoinPage';
+import PlayPage from './components/participant/PlayPage';
+import LoginPage from './components/auth/LoginPage';
+import RegisterPage from './components/auth/RegisterPage';
+import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
+import ResetPasswordPage from './components/auth/ResetPasswordPage';
 
+// Protected pages
+import Dashboard from './components/presenter/Dashboard';
+import CreateSession from './pages/presenter/CreateSession';
+import HostSession from './components/presenter/HostSession';
 import AnalyticsPage from './pages/presenter/AnalyticsPage';
+import AdminPage from './pages/admin/AdminPage';
+
+// SEO & Public
+import LandingPage from './pages/public/LandingPage';
+import SEOHead from './components/seo/SEOHead';
 
 function App() {
     return (
-        <BrowserRouter>
+        <Router>
             <Routes>
-                {/* Landing / Join page */}
-                <Route path="/" element={<JoinPage />} />
+                {/* ===== PUBLIC ROUTES ===== */}
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/join" element={<JoinPage />} />
                 <Route path="/join/:code" element={<JoinPage />} />
-
-                {/* Participant play page */}
                 <Route path="/play/:code" element={<PlayPage />} />
 
                 {/* Authentication */}
-                <Route path="/login/auth" element={<LoginPage />} />
-                <Route path="/register/auth" element={<RegisterPage />} />
-                <Route path="/forgot-password/auth" element={<ForgotPasswordPage />} />
-                <Route path="/reset-password/auth" element={<ResetPasswordPage />} />
+                <Route path="/auth/login" element={<LoginPage />} />
+                <Route path="/auth/register" element={<RegisterPage />} />
+                <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
-                {/* Presenter dashboard & Library */}
+                {/* ===== PROTECTED ROUTES ===== */}
                 <Route
-                    path="/host"
+                    path="/dashboard"
                     element={
                         <ProtectedRoute>
-                            <PresenterDashboard />
+                            <SEOHead noindex />
+                            <Dashboard />
                         </ProtectedRoute>
                     }
                 />
                 <Route
-                    path="/library"
+                    path="/create"
                     element={
                         <ProtectedRoute>
-                            <LibraryPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/analytics/:sessionId"
-                    element={
-                        <ProtectedRoute>
-                            <AnalyticsPage />
+                            <SEOHead noindex />
+                            <CreateSession />
                         </ProtectedRoute>
                     }
                 />
@@ -65,15 +71,38 @@ function App() {
                     path="/host/:sessionId"
                     element={
                         <ProtectedRoute>
+                            <SEOHead noindex />
                             <HostSession />
                         </ProtectedRoute>
                     }
                 />
+                <Route
+                    path="/analytics/:sessionId"
+                    element={
+                        <ProtectedRoute>
+                            <SEOHead noindex />
+                            <AnalyticsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/admin"
+                    element={
+                        <ProtectedRoute requiredRole="admin">
+                            <SEOHead noindex />
+                            <AdminPage />
+                        </ProtectedRoute>
+                    }
+                />
 
-                {/* Fallback */}
+                {/* ===== BACKWARD COMPAT REDIRECTS ===== */}
+                <Route path="/library" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/host" element={<Navigate to="/dashboard" replace />} />
+
+                {/* Catch-all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-        </BrowserRouter>
+        </Router>
     );
 }
 

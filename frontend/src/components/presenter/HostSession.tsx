@@ -86,7 +86,7 @@ function HostSession() {
             setLoading(false);
         } catch (err) {
             console.error('Failed to load session:', err);
-            navigate('/library');
+            navigate('/dashboard');
         }
     };
 
@@ -283,7 +283,7 @@ function HostSession() {
     const endSession = useCallback(() => {
         if (window.confirm('Are you sure you want to end this session?')) {
             emit('end_session');
-            navigate('/library');
+            navigate('/dashboard');
         }
     }, [emit, navigate]);
 
@@ -345,12 +345,17 @@ function HostSession() {
             </header>
 
             <div className={`host-content ${isPresentationMode ? 'presentation-active' : ''}`}>
-                {/* Question List */}
+                {/* 1. Left Sidebar: Question Navigation */}
                 {!isPresentationMode && (
                     <aside className="card questions-sidebar">
-                        <h3 className="mb-md">Questions ({questions.length})</h3>
+                        <div className="flex justify-between items-center mb-md">
+                            <h3 className="m-0">Questions</h3>
+                            <button className="btn btn-small btn-secondary" onClick={() => setShowBuilder(true)}>
+                                + Add
+                            </button>
+                        </div>
                         {questions.length === 0 ? (
-                            <p className="text-muted">No questions yet. Add one to get started!</p>
+                            <p className="text-muted">No questions yet.</p>
                         ) : (
                             <div className="flex flex-col gap-sm">
                                 {questions.map((q, index) => (
@@ -363,7 +368,7 @@ function HostSession() {
                                             {index + 1}. {q.question_type.toUpperCase()}
                                         </div>
                                         <div className="question-item-text">
-                                            {q.question_text.substring(0, 50)}...
+                                            {q.question_text.length > 40 ? q.question_text.substring(0, 40) + '...' : q.question_text}
                                         </div>
                                     </button>
                                 ))}
@@ -372,7 +377,7 @@ function HostSession() {
                     </aside>
                 )}
 
-                {/* Main Display Area */}
+                {/* 2. Main Display Area (Center) */}
                 <main className={`card display-main ${isPresentationMode ? 'presentation-main' : ''}`}>
                     {!activeQuestion ? (
                         <div className="display-empty">
@@ -382,68 +387,94 @@ function HostSession() {
                             </div>
                         </div>
                     ) : (
-                        <>
-                            <div className="display-content">
-                                {showLeaderboard ? (
-                                    <LeaderboardDisplay leaderboard={leaderboard} />
-                                ) : (
-                                    <>
-                                        <h2 className="display-question">
-                                            {activeQuestion.question_text}
-                                        </h2>
+                        <div className="display-content">
+                            {showLeaderboard ? (
+                                <LeaderboardDisplay leaderboard={leaderboard} />
+                            ) : (
+                                <>
+                                    <h2 className="display-question">
+                                        {activeQuestion.question_text}
+                                    </h2>
 
-                                        {/* Response count */}
-                                        <div className="text-center mb-lg">
-                                            <span className="response-count">{responseCount}</span>
-                                            <p className="text-muted">responses</p>
-                                        </div>
+                                    {/* Results display */}
+                                    {results && activeQuestion.question_type === 'poll' && (
+                                        <PollResultsDisplay
+                                            results={results as PollResults}
+                                            options={activeQuestion.options || []}
+                                        />
+                                    )}
 
-                                        {/* Results display */}
-                                        {results && activeQuestion.question_type === 'poll' && (
-                                            <PollResultsDisplay
-                                                results={results as PollResults}
-                                                options={activeQuestion.options || []}
-                                            />
-                                        )}
+                                    {results && activeQuestion.question_type === 'word_cloud' && (
+                                        <WordCloudDisplay words={results as WordCloudWord[]} />
+                                    )}
 
-                                        {results && activeQuestion.question_type === 'word_cloud' && (
-                                            <WordCloudDisplay words={results as WordCloudWord[]} />
-                                        )}
+                                    {results && activeQuestion.question_type === 'ranking' && (
+                                        <RankingResultsDisplay
+                                            results={results as { [key: string]: number }}
+                                            options={activeQuestion.options || []}
+                                        />
+                                    )}
 
-                                        {results && activeQuestion.question_type === 'ranking' && (
-                                            <RankingResultsDisplay
-                                                results={results as { [key: string]: number }}
-                                                options={activeQuestion.options || []}
-                                            />
-                                        )}
+                                    {results && activeQuestion.question_type === 'pin_image' && (
+                                        <PinImageResultsDisplay
+                                            results={results as unknown as { x: number, y: number }[]}
+                                            imageUrl={activeQuestion.options?.[0]?.text || ''}
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+                </main>
 
-                                        {results && activeQuestion.question_type === 'pin_image' && (
-                                            <PinImageResultsDisplay
-                                                results={results as unknown as { x: number, y: number }[]}
-                                                imageUrl={activeQuestion.options?.[0]?.text || ''}
-                                            />
-                                        )}
-                                    </>
-                                )}
+                {/* 3. Right Sidebar: Stats & Live Controls */}
+                {!isPresentationMode && (
+                    <aside className="stats-sidebar">
+                        {/* Live Stats */}
+                        <div className="control-panel">
+                            <h3 className="mb-md">Live Session</h3>
+                            <div className="grid-2">
+                                <div className="stat-card">
+                                    <span className="stat-label">Participants</span>
+                                    <span className="stat-value">{participantCount}</span>
+                                </div>
+                                <div className="stat-card">
+                                    <span className="stat-label">Responses</span>
+                                    <span className="stat-value">{responseCount}</span>
+                                </div>
                             </div>
+                        </div>
 
-                            {/* Controls */}
-                            {!isPresentationMode && (
-                                <div className="display-controls">
+                        {/* Quick Action Panel */}
+                        {activeQuestion && (
+                            <div className="control-panel">
+                                <h4 className="mb-md">Quick Controls</h4>
+                                <div className="flex flex-col gap-sm">
                                     <button
-                                        className="btn btn-secondary"
+                                        className={`btn ${activeQuestion.is_locked ? 'btn-success' : 'btn-secondary'} btn-block`}
                                         onClick={() => toggleLock(!activeQuestion.is_locked)}
                                     >
                                         {activeQuestion.is_locked ? 'Unlock Voting' : 'Lock Voting'}
                                     </button>
-                                    <button className="btn btn-primary" onClick={revealResults}>
-                                        Show Results
+                                    <button
+                                        className="btn btn-primary btn-block"
+                                        onClick={revealResults}
+                                        disabled={activeQuestion.is_results_visible}
+                                    >
+                                        Reveal Results
                                     </button>
                                 </div>
-                            )}
-                        </>
-                    )}
-                </main>
+                            </div>
+                        )}
+
+                        {/* Session Actions */}
+                        <div className="mt-auto">
+                            <button className="btn btn-danger btn-block" onClick={endSession}>
+                                End Session
+                            </button>
+                        </div>
+                    </aside>
+                )}
             </div>
 
             {/* Question Builder Modal */}

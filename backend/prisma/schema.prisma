@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  users     User[]
+  sessions  Session[]
+
+  @@map("organizations")
+}
+
+model User {
+  id              String        @id @default(uuid())
+  email           String        @unique
+  displayName     String?       @map("display_name")
+  passwordHash    String?       @map("password_hash")
+  authProvider    String        @default("email") @map("auth_provider")
+  googleId        String?       @unique @map("google_id")
+  linkedinId      String?       @unique @map("linkedin_id")
+  role            String        @default("user")
+  isVerified      Boolean       @default(false) @map("is_verified")
+  avatarUrl       String?       @map("avatar_url")
+  organizationId  String?       @map("organization_id")
+  lastLoginAt     DateTime?     @map("last_login_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  sessions        Session[]
+  authTokens      AuthToken[]
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @map("token_hash")
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRevoked])
+  @@map("refresh_tokens")
+}
+
+model AuthToken {
+  id         String    @id @default(uuid())
+  userId     String?   @map("user_id")
+  email      String?
+  tokenType  String    @map("token_type")
+  code       String
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       User?     @relation(fields: [userId], references: [id])
+
+  @@map("auth_tokens")
+}
+
+model Session {
+  id                String         @id @default(uuid())
+  joinCode          String         @unique @map("join_code")
+  title             String
+  presenterId       String         @map("presenter_id")
+  userId            String?        @map("user_id")
+  organizationId    String?        @map("organization_id")
+  status            String         @default("active")
+  mode              String         @default("mixed")
+  settings          Json?          @default("{}")
+  currentQuestionId String?        @map("current_question_id")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  expiresAt         DateTime       @map("expires_at")
+  endedAt           DateTime?      @map("ended_at")
+  isDeleted         Boolean        @default(false) @map("is_deleted")
+  user              User?          @relation(fields: [userId], references: [id])
+  organization      Organization?  @relation(fields: [organizationId], references: [id])
+  questions         Question[]
+  participants      Participant[]
+  responses         Response[]
+
+  @@index([joinCode])
+  @@index([status, expiresAt])
+  @@index([organizationId])
+  @@map("sessions")
+}
+
+model Question {
+  id               String      @id @default(uuid())
+  sessionId        String      @map("session_id")
+  questionText     String      @map("question_text")
+  questionType     String      @map("question_type")
+  options          Json?
+  settings         Json?       @default("{}")
+  correctAnswer    Json?       @map("correct_answer")
+  timeLimit        Int?        @map("time_limit")
+  isActive         Boolean     @default(false) @map("is_active")
+  isLocked         Boolean     @default(false) @map("is_locked")
+  isResultsVisible Boolean     @default(false) @map("is_results_visible")
+  isDeleted        Boolean     @default(false) @map("is_deleted")
+  activatedAt      DateTime?   @map("activated_at")
+  displayOrder     Int         @default(0) @map("display_order")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  session          Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  responses        Response[]
+  brainstormIdeas  BrainstormIdea[]
+
+  @@index([sessionId, isActive, isDeleted])
+  @@map("questions")
+}
+
+model Participant {
+  id                String      @id @default(uuid())
+  sessionId         String      @map("session_id")
+  cookieId          String      @map("cookie_id")
+  socketId          String?     @map("socket_id")
+  nickname          String?
+  isConnected       Boolean     @default(true) @map("is_connected")
+  isRemoved         Boolean     @default(false) @map("is_removed")
+  totalScore        Int         @default(0) @map("total_score")
+  joinedAt          DateTime    @default(now()) @map("joined_at")
+  lastSeenAt        DateTime    @default(now()) @map("last_seen_at")
+  session           Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  responses         Response[]
+  brainstormIdeas   BrainstormIdea[]
+  brainstormVotes   BrainstormVote[]
+
+  @@unique([sessionId, cookieId])
+  @@index([socketId])
+  @@map("participants")
+}
+
+model Response {
+  id             String      @id @default(uuid())
+  questionId     String      @map("question_id")
+  participantId  String      @map("participant_id")
+  sessionId      String      @map("session_id")
+  responseData   Json        @map("response_data")
+  isCorrect      Boolean?    @map("is_correct")
+  score          Int         @default(0)
+  responseTimeMs Int?        @map("response_time_ms")
+  submittedAt    DateTime    @default(now()) @map("submitted_at")
+  question       Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  participant    Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  session        Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, participantId])
+  @@map("responses")
+}
+
+model BrainstormIdea {
+  id            String      @id @default(uuid())
+  questionId    String      @map("question_id")
+  participantId String      @map("participant_id")
+  content       String
+  status        String      @default("active")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  question      Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  votes         BrainstormVote[]
+
+  @@map("brainstorm_ideas")
+}
+
+model BrainstormVote {
+  id            String         @id @default(uuid())
+  ideaId        String         @map("idea_id")
+  participantId String         @map("participant_id")
+  votedAt       DateTime       @default(now()) @map("voted_at")
+  idea          BrainstormIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  participant   Participant    @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([ideaId, participantId])
+  @@map("brainstorm_votes")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String   @map("actor_id")
+  action    String
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  actor     User     @relation(fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([action])
+  @@map("audit_logs")
+}

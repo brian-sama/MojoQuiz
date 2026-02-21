@@ -1,166 +1,225 @@
 /**
- * Presenter Dashboard Component
- * Create and manage sessions
+ * Dashboard — Enterprise Control Center
+ * 
+ * Flow: Login → HERE → Create/Edit → Present → Analytics → HERE
+ * 
+ * Sections:
+ * 1. Hero (Welcome + CTA)
+ * 2. Stats Cards (Sessions, Participants, Engagement, Drafts)
+ * 3. Recent Sessions Grid (cards with status badges + quick actions)
+ * 4. Empty State (when no sessions)
  */
 
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
+import AppLayout from '../../layouts/AppLayout';
 
-function PresenterDashboard() {
+interface DashboardStats {
+    total_sessions: number;
+    total_participants: number;
+    avg_engagement_score: number;
+    active_drafts: number;
+}
+
+interface SessionItem {
+    id: string;
+    title: string;
+    mode: string;
+    status: string;
+    join_code: string;
+    created_at: string;
+    participant_count?: number;
+}
+
+function Dashboard() {
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
-    const [title, setTitle] = useState('');
-    const [mode, setMode] = useState<'mentimeter' | 'kahoot'>('mentimeter');
-    const [loading, setLoading] = useState(false);
+    const { user } = useAuth();
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [sessions, setSessions] = useState<SessionItem[]>([]);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    const handleCreateSession = async (e: React.FormEvent) => {
-        e.preventDefault();
+    useEffect(() => {
+        loadDashboard();
+    }, []);
 
-        if (!title.trim()) {
-            setError('Please enter a session title');
-            return;
-        }
-
+    const loadDashboard = async () => {
         setLoading(true);
         setError('');
-
         try {
-            const presenterId = user?.displayName || 'Guest Presenter';
-            const data = await api.createSession(title.trim(), mode, presenterId, user?.id);
-
-            // Store session info
-            localStorage.setItem('currentSession', JSON.stringify(data));
-
-            // Navigate to host session view
-            navigate(`/host/${data.sessionId}`);
-
+            const [statsData, sessionsData] = await Promise.all([
+                api.get('/analytics/dashboard'),
+                api.get('/library'),
+            ]);
+            setStats(statsData);
+            setSessions(Array.isArray(sessionsData) ? sessionsData.slice(0, 6) : []);
         } catch (err: any) {
-            setError(err.message || 'Failed to create session');
+            setError(err.message || 'Failed to load dashboard');
         } finally {
             setLoading(false);
         }
     };
 
+    const getStatusBadgeClass = (status: string) => {
+        switch (status) {
+            case 'active': return 'status-badge status-badge-active';
+            case 'ended': return 'status-badge status-badge-ended';
+            default: return 'status-badge status-badge-draft';
+        }
+    };
+
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case 'active': return 'Live';
+            case 'ended': return 'Completed';
+            default: return 'Draft';
+        }
+    };
+
+    const formatDate = (dateStr: string) => {
+        return new Date(dateStr).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+    };
+
     return (
-        <div className="page page-centered">
-            <div className="container container-sm">
-                <div className="flex justify-between items-center mb-xl">
-                    <div className="text-left">
-                        <h1 className="app-title">
-                            Create Session
-                        </h1>
-                        <p className="text-muted">
-                            Start a live engagement session for your audience
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-md">
-                        <Link to="/library" className="btn btn-secondary py-xs px-sm text-sm">
-                            View Library
-                        </Link>
-                        {user && (
-                            <div className="flex items-center gap-md">
-                                <div className="text-right">
-                                    <p className="font-bold">{user.displayName}</p>
-                                    <button onClick={logout} className="link text-sm">Logout</button>
-                                </div>
-                                {user.avatarUrl && (
-                                    <img src={user.avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full" />
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <form onSubmit={handleCreateSession} className="card">
-                    <div className="mb-lg">
-                        <label htmlFor="session-title" className="form-label">
-                            Session Title
-                        </label>
-                        <input
-                            id="session-title"
-                            type="text"
-                            className="input"
-                            placeholder="e.g., Team Meeting Feedback"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            maxLength={100}
-                            autoFocus
-                        />
-                    </div>
-
-                    <div className="mb-lg">
-                        <label className="form-label">
-                            Session Mode
-                        </label>
-                        <div className="flex gap-sm flex-wrap">
-                            <ModeButton
-                                selected={mode === 'mentimeter'}
-                                onClick={() => setMode('mentimeter')}
-                                icon=""
-                                label="Engagement"
-                                description="Polls, Word Clouds, Scale"
-                            />
-                            <ModeButton
-                                selected={mode === 'kahoot'}
-                                onClick={() => setMode('kahoot')}
-                                icon=""
-                                label="Quiz"
-                                description="Timed Questions, Leaderboard"
-                            />
-                        </div>
-                    </div>
-
-                    {error && (
-                        <p className="error-text text-center mb-md">
-                            {error}
-                        </p>
-                    )}
-
+        <AppLayout>
+            {/* Hero Section */}
+            <section className="dashboard-hero">
+                <h1>Welcome back, {user?.displayName?.split(' ')[0] || 'there'} 👋</h1>
+                <p>Create engaging sessions and track participation in real time.</p>
+                <div className="dashboard-actions">
                     <button
-                        type="submit"
-                        className="btn btn-primary btn-large btn-block"
-                        disabled={loading || !title.trim()}
+                        className="btn btn-primary"
+                        onClick={() => navigate('/create')}
                     >
-                        {loading ? 'Creating...' : 'Create Session'}
+                        + Create New Session
                     </button>
-                </form>
-
-                <div className="text-center mt-xl">
                     <button
-                        onClick={() => navigate('/')}
                         className="btn btn-secondary"
+                        onClick={() => navigate('/templates')}
                     >
-                        Join as participant
+                        Browse Templates
                     </button>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            {/* Stats Cards */}
+            <section className="stat-cards">
+                {loading ? (
+                    <>
+                        <div className="stat-card"><div className="skeleton skeleton-text-lg"></div><div className="skeleton skeleton-stat"></div></div>
+                        <div className="stat-card"><div className="skeleton skeleton-text-lg"></div><div className="skeleton skeleton-stat"></div></div>
+                        <div className="stat-card"><div className="skeleton skeleton-text-lg"></div><div className="skeleton skeleton-stat"></div></div>
+                        <div className="stat-card"><div className="skeleton skeleton-text-lg"></div><div className="skeleton skeleton-stat"></div></div>
+                    </>
+                ) : (
+                    <>
+                        <div className="stat-card">
+                            <div className="stat-card-label">Sessions Created</div>
+                            <div className="stat-card-value">{stats?.total_sessions || 0}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-card-label">Participants Engaged</div>
+                            <div className="stat-card-value">{stats?.total_participants || 0}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-card-label">Avg Engagement</div>
+                            <div className="stat-card-value">{stats?.avg_engagement_score || 0}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-card-label">Active Drafts</div>
+                            <div className="stat-card-value">{stats?.active_drafts || 0}</div>
+                        </div>
+                    </>
+                )}
+            </section>
+
+            {/* Error */}
+            {error && (
+                <div className="card mb-md" style={{ borderColor: 'var(--color-error)' }}>
+                    <p style={{ color: 'var(--color-error)' }}>{error}</p>
+                    <button className="btn btn-secondary btn-small mt-sm" onClick={loadDashboard}>
+                        Retry
+                    </button>
+                </div>
+            )}
+
+            {/* Recent Sessions */}
+            {!loading && sessions.length > 0 && (
+                <section>
+                    <div className="section-header">
+                        <h2>Recent Sessions</h2>
+                        <button className="btn btn-secondary btn-small" onClick={() => navigate('/library')}>
+                            View All
+                        </button>
+                    </div>
+                    <div className="session-grid">
+                        {sessions.map((session) => (
+                            <div
+                                key={session.id}
+                                className="session-card"
+                                onClick={() => navigate(`/host/${session.id}`)}
+                            >
+                                <div className="session-card-header">
+                                    <div className="session-card-title">{session.title}</div>
+                                    <span className={getStatusBadgeClass(session.status)}>
+                                        {getStatusLabel(session.status)}
+                                    </span>
+                                </div>
+                                <div className="session-card-meta">
+                                    <span>{formatDate(session.created_at)}</span>
+                                    <span>•</span>
+                                    <span>{session.mode}</span>
+                                    {session.join_code && (
+                                        <>
+                                            <span>•</span>
+                                            <span className="text-bold" style={{ fontFamily: 'monospace' }}>{session.join_code}</span>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="session-card-actions" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                        className="btn btn-primary btn-small"
+                                        onClick={() => navigate(`/host/${session.id}`)}
+                                    >
+                                        Present
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary btn-small"
+                                        onClick={() => navigate(`/analytics/${session.id}`)}
+                                    >
+                                        Analytics
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Empty State */}
+            {!loading && sessions.length === 0 && !error && (
+                <div className="empty-state">
+                    <div className="empty-state-icon">📋</div>
+                    <h3>No sessions yet</h3>
+                    <p>Create your first session to start engaging your audience with live polls, quizzes, and word clouds.</p>
+                    <div className="dashboard-actions justify-center">
+                        <button className="btn btn-primary" onClick={() => navigate('/create')}>
+                            Create Your First Session
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => navigate('/templates')}>
+                            Start from Template
+                        </button>
+                    </div>
+                </div>
+            )}
+        </AppLayout>
     );
 }
 
-interface ModeButtonProps {
-    selected: boolean;
-    onClick: () => void;
-    icon: string;
-    label: string;
-    description: string;
-}
-
-function ModeButton({ selected, onClick, icon, label, description }: ModeButtonProps) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`mode-button ${selected ? 'mode-button-selected' : ''}`}
-        >
-            <span className="mode-button-icon">{icon}</span>
-            <p className="mode-button-label">{label}</p>
-            <p className="mode-button-desc">{description}</p>
-        </button>
-    );
-}
-
-export default PresenterDashboard;
+export default Dashboard;

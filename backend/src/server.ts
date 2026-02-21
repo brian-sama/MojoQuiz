@@ -5,17 +5,22 @@
 
 import http from 'http';
 import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
 import dotenv from 'dotenv';
 
 import app from './app.js';
 import initializeSocketHandlers from './socket/socketHandler.js';
 import { expireOldSessions } from './services/database.js';
+import logger from './utils/logger.js';
+import './services/WorkerService.js'; // Initialize the worker
 
 dotenv.config();
 
 const PORT = parseInt(process.env.PORT || '3001');
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const CLEANUP_INTERVAL = parseInt(process.env.CLEANUP_INTERVAL_MINUTES || '5') * 60 * 1000;
+const REDIS_URL = process.env.REDIS_URL;
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -31,7 +36,49 @@ const io = new Server(server, {
     pingInterval: 25000,
 });
 
-// Initialize socket handlers
+/**
+ * Configure Redis Adapter for Horizontal Scaling
+ */
+async function setupRedisAdapter() {
+    if (!REDIS_URL) {
+        logger.warn('REDIS_URL not found. Skipping Redis adapter setup (scaling disabled).');
+        return;
+    }
+
+    try {
+        const pubClient = createClient({ url: REDIS_URL });
+        const subClient = pubClient.duplicate();
+
+        await Promise.all([pubClient.connect(), subClient.connect()]);
+
+        io.adapter(createAdapter(pubClient, subClient));
+        logger.info('✅ Socket.IO Redis adapter connected and enabled.');
+    } catch (error) {
+        logger.error('❌ Failed to connect to Redis for Socket.IO adapter:', error);
+    }
+}
+
+import { throttleEvents } from './middleware/socketThrottle.js';
+import { TokenService } from './services/TokenService.js';
+
+// Socket JWT Authentication for presenter connections
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (token) {
+        try {
+            const decoded = TokenService.verifyAccessToken(token);
+            (socket as any).userId = decoded.userId;
+            (socket as any).userRole = decoded.role;
+        } catch {
+            // Token invalid — still allow connection (participant may not have token)
+            logger.warn({ socketId: socket.id }, 'Socket auth: invalid token provided');
+        }
+    }
+    next();
+});
+
+// Initialize socket handlers with throttle
+io.use(throttleEvents);
 initializeSocketHandlers(io);
 
 // ============================================
@@ -42,7 +89,7 @@ class SessionExpirationManager {
     private intervalId: NodeJS.Timeout | null = null;
 
     start(): void {
-        console.log(`🔄 Session expiration check running every ${CLEANUP_INTERVAL / 60000} minutes`);
+        logger.info(`🔄 Session expiration check running every ${CLEANUP_INTERVAL / 60000} minutes`);
 
         // Run immediately
         this.checkExpiredSessions();
@@ -64,10 +111,10 @@ class SessionExpirationManager {
         try {
             const expiredCount = await expireOldSessions();
             if (expiredCount > 0) {
-                console.log(`⏰ Expired ${expiredCount} session(s)`);
+                logger.info(`⏰ Expired ${expiredCount} session(s)`);
             }
         } catch (error) {
-            console.error('Error checking expired sessions:', error);
+            logger.error('Error checking expired sessions:', error);
         }
     }
 }
@@ -78,20 +125,27 @@ const expirationManager = new SessionExpirationManager();
 // START SERVER
 // ============================================
 
-server.listen(PORT, () => {
-    console.log('');
-    console.log('🎯 ====================================');
-    console.log('   ENGAGEMENT PLATFORM SERVER');
-    console.log('====================================');
-    console.log(`📡 HTTP Server:   http://localhost:${PORT}`);
-    console.log(`🔌 WebSocket:     ws://localhost:${PORT}`);
-    console.log(`🌐 CORS Origin:   ${CORS_ORIGIN}`);
-    console.log(`📊 Health Check:  http://localhost:${PORT}/health`);
-    console.log('====================================');
-    console.log('');
+async function bootstrap() {
+    await setupRedisAdapter();
 
-    // Start session expiration manager
-    expirationManager.start();
+    server.listen(PORT, () => {
+        logger.info('🎯 ====================================');
+        logger.info('   ENGAGEMENT PLATFORM SERVER');
+        logger.info('====================================');
+        logger.info(`📡 HTTP Server:   http://localhost:${PORT}`);
+        logger.info(`🔌 WebSocket:     ws://localhost:${PORT}`);
+        logger.info(`🌐 CORS Origin:   ${CORS_ORIGIN}`);
+        logger.info(`📊 Health Check:  http://localhost:${PORT}/health`);
+        logger.info('====================================');
+
+        // Start session expiration manager
+        expirationManager.start();
+    });
+}
+
+bootstrap().catch(err => {
+    logger.fatal('Failed to bootstrap server:', err);
+    process.exit(1);
 });
 
 // ============================================
@@ -99,25 +153,25 @@ server.listen(PORT, () => {
 // ============================================
 
 const gracefulShutdown = (signal: string) => {
-    console.log(`\n${signal} received. Shutting down gracefully...`);
+    logger.info(`\n${signal} received. Shutting down gracefully...`);
 
     // Stop expiration manager
     expirationManager.stop();
 
     // Close Socket.IO connections
     io.close(() => {
-        console.log('Socket.IO connections closed');
+        logger.info('Socket.IO connections closed');
 
         // Close HTTP server
         server.close(() => {
-            console.log('HTTP server closed');
+            logger.info('HTTP server closed');
             process.exit(0);
         });
     });
 
     // Force exit after 10 seconds
     setTimeout(() => {
-        console.error('Could not close connections in time, forcefully shutting down');
+        logger.error('Could not close connections in time, forcefully shutting down');
         process.exit(1);
     }, 10000);
 };

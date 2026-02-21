@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
+
+type SortConfig = {
+    key: string;
+    direction: 'asc' | 'desc';
+};
 
 const LibraryPage: React.FC = () => {
     const navigate = useNavigate();
@@ -10,6 +15,11 @@ const LibraryPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState<'my-sessions' | 'templates'>('my-sessions');
+
+    // Enterprise Data Table State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'created_at', direction: 'desc' });
+    const [filterMode, setFilterMode] = useState<string>('all');
 
     useEffect(() => {
         fetchSessions();
@@ -48,6 +58,46 @@ const LibraryPage: React.FC = () => {
         }
     };
 
+    // Sorting and Filtering Logic
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const filteredAndSortedSessions = useMemo(() => {
+        let result = [...sessions];
+
+        // 1. Filter by Search Query
+        if (searchQuery) {
+            result = result.filter(s =>
+                s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.mode.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        // 2. Filter by Mode
+        if (filterMode !== 'all') {
+            result = result.filter(s => s.mode === filterMode);
+        }
+
+        // 3. Sort
+        result.sort((a, b) => {
+            const valA = a[sortConfig.key];
+            const valB = b[sortConfig.key];
+
+            if (!valA || !valB) return 0;
+
+            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return result;
+    }, [sessions, searchQuery, sortConfig, filterMode]);
+
     return (
         <div className="page">
             <header className="auth-header py-md px-lg flex justify-between items-center bg-dark-soft border-b border-white-10">
@@ -59,25 +109,50 @@ const LibraryPage: React.FC = () => {
                 </div>
             </header>
 
-            <main className="container mt-xl">
+            <main className="container mt-xl" style={{ maxWidth: '1200px' }}>
                 <div className="flex justify-between items-center mb-lg">
-                    <h1 className="text-2xl font-bold">Your Library</h1>
-                    <Link to="/host" className="btn btn-primary">Create New</Link>
+                    <h1 className="text-2xl font-bold">Session Library</h1>
+                    <Link to="/host" className="btn btn-primary">Create New Session</Link>
                 </div>
 
                 <div className="tabs mb-lg border-b border-white-10">
                     <button
-                        className={`tab-item pb-sm px-md ${activeTab === 'my-sessions' ? 'border-b-2 border-primary text-primary' : 'text-secondary'}`}
+                        className={`tab-item pb-sm px-md ${activeTab === 'my-sessions' ? 'border-b-2 border-primary text-primary' : 'text-secondary font-medium'}`}
                         onClick={() => setActiveTab('my-sessions')}
                     >
                         My Sessions
                     </button>
                     <button
-                        className={`tab-item pb-sm px-md ${activeTab === 'templates' ? 'border-b-2 border-primary text-primary' : 'text-secondary'}`}
+                        className={`tab-item pb-sm px-md ${activeTab === 'templates' ? 'border-b-2 border-primary text-primary' : 'text-secondary font-medium'}`}
                         onClick={() => setActiveTab('templates')}
                     >
-                        Templates
+                        Sample Templates
                     </button>
+                </div>
+
+                {/* Table Controls */}
+                <div className="table-controls mb-md card p-md">
+                    <div className="search-input-wrapper flex-1">
+                        <input
+                            type="text"
+                            className="input"
+                            placeholder="Search by title or mode..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex gap-md">
+                        <select
+                            className="input w-auto"
+                            value={filterMode}
+                            onChange={(e) => setFilterMode(e.target.value)}
+                        >
+                            <option value="all">All Modes</option>
+                            <option value="quiz">Quiz</option>
+                            <option value="poll">Poll</option>
+                            <option value="word_cloud">Word Cloud</option>
+                        </select>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -86,60 +161,80 @@ const LibraryPage: React.FC = () => {
                     </div>
                 ) : error ? (
                     <div className="alert alert-error">{error}</div>
-                ) : sessions.length === 0 ? (
-                    <div className="text-center py-xl bg-dark-soft rounded-lg">
-                        <p className="text-secondary mb-md">No sessions found.</p>
-                        <Link to="/host" className="btn btn-primary">Start your first session</Link>
+                ) : filteredAndSortedSessions.length === 0 ? (
+                    <div className="text-center py-xl bg-dark-soft rounded-lg card">
+                        <p className="text-secondary mb-md">No sessions matching your criteria.</p>
+                        <button onClick={() => { setSearchQuery(''); setFilterMode('all'); }} className="btn btn-secondary">Clear Filters</button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
-                        {sessions.map((session) => (
-                            <div key={session.id} className="card p-lg flex flex-col justify-between hover:border-primary transition-colors">
-                                <div>
-                                    <div className="flex justify-between items-start mb-sm">
-                                        <span className="badge badge-primary uppercase text-xs tracking-widest">{session.mode}</span>
-                                        <span className="text-secondary text-xs">{new Date(session.created_at).toLocaleDateString()}</span>
-                                    </div>
-                                    <h3 className="text-xl font-bold mb-md line-clamp-2">{session.title}</h3>
-                                </div>
-
-                                <div className="flex gap-sm mt-lg">
-                                    <button
-                                        onClick={() => navigate(`/host/${session.id}`)}
-                                        className="btn btn-primary flex-1 py-sm text-sm"
-                                    >
-                                        Launch
-                                    </button>
-                                    <button
-                                        onClick={() => navigate(`/analytics/${session.id}`)}
-                                        className="btn btn-secondary py-sm px-md text-sm"
-                                        title="View Analytics"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                        </svg>
-                                    </button>
-                                    <button
-                                        onClick={() => handleDuplicate(session.id)}
-                                        className="btn btn-secondary py-sm px-md text-sm"
-                                        title="Duplicate"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                                        </svg>
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(session.id)}
-                                        className="btn btn-error py-sm px-md text-sm"
-                                        title="Delete"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                    <div className="data-table-container">
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th onClick={() => handleSort('title')}>
+                                        Session Title
+                                        {sortConfig.key === 'title' && <span className="table-sort-icon active">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
+                                    </th>
+                                    <th onClick={() => handleSort('mode')}>
+                                        Mode
+                                        {sortConfig.key === 'mode' && <span className="table-sort-icon active">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
+                                    </th>
+                                    <th onClick={() => handleSort('created_at')}>
+                                        Created Date
+                                        {sortConfig.key === 'created_at' && <span className="table-sort-icon active">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
+                                    </th>
+                                    <th className="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredAndSortedSessions.map((session) => (
+                                    <tr key={session.id}>
+                                        <td className="font-bold">{session.title}</td>
+                                        <td>
+                                            <span className={`badge-mode badge-mode-${session.mode}`}>
+                                                {session.mode}
+                                            </span>
+                                        </td>
+                                        <td className="text-secondary text-sm">
+                                            {new Date(session.created_at).toLocaleDateString(undefined, {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
+                                        </td>
+                                        <td className="action-cell">
+                                            <button
+                                                onClick={() => navigate(`/host/${session.id}`)}
+                                                className="btn btn-primary btn-small"
+                                            >
+                                                Launch
+                                            </button>
+                                            <button
+                                                onClick={() => navigate(`/analytics/${session.id}`)}
+                                                className="btn btn-secondary btn-icon btn-small"
+                                                title="Analytics"
+                                            >
+                                                📊
+                                            </button>
+                                            <button
+                                                onClick={() => handleDuplicate(session.id)}
+                                                className="btn btn-secondary btn-icon btn-small"
+                                                title="Duplicate"
+                                            >
+                                                📋
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(session.id)}
+                                                className="btn btn-danger btn-icon btn-small"
+                                                title="Delete"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </main>

@@ -1,19 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { TokenService } from '../services/TokenService.js';
 import db from '../services/database.js';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+import logger from '../utils/logger.js';
 
 export interface AuthRequest extends Request {
     user?: {
         id: string;
         email: string;
+        role: string;
+        organizationId: string | null;
     };
 }
 
 /**
  * Auth Middleware
- * Verifies JWT and attaches user to request
+ * Verifies JWT access token and attaches full user info to request
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
     const authReq = req as AuthRequest;
@@ -26,17 +27,22 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const token = authHeader.split(' ')[1];
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+        const decoded = TokenService.verifyAccessToken(token);
         const user = await db.getUserById(decoded.userId);
 
         if (!user) {
             return res.status(401).json({ error: 'Invalid token. User not found.' });
         }
 
-        authReq.user = { id: user.id, email: user.email };
+        authReq.user = {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            organizationId: user.organization_id ?? null,
+        };
         next();
     } catch (error) {
-        console.error('Auth middleware error:', error);
-        res.status(401).json({ error: 'Invalid or expired token.' });
+        logger.warn({ error }, 'Auth middleware: invalid or expired token');
+        res.status(401).json({ error: 'Invalid or expired token.', code: 'TOKEN_EXPIRED' });
     }
 };

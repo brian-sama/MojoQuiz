@@ -29,6 +29,7 @@ export const api = {
         const response = await fetch(url, {
             ...options,
             headers,
+            credentials: 'include',
         });
 
         // Handle empty responses
@@ -37,8 +38,27 @@ export const api = {
 
         if (!response.ok) {
             if (response.status === 401) {
-                // Potential token expiry - could handle redirect here
-                // localStorage.removeItem('auth_token');
+                // Attempt silent token refresh
+                try {
+                    const refreshRes = await fetch(`${this.baseUrl}/auth/refresh`, {
+                        method: 'POST',
+                        credentials: 'include',
+                    });
+                    if (refreshRes.ok) {
+                        const refreshData = await refreshRes.json();
+                        localStorage.setItem('auth_token', refreshData.accessToken);
+                        // Retry original request with new token
+                        headers['Authorization'] = `Bearer ${refreshData.accessToken}`;
+                        const retryRes = await fetch(url, { ...options, headers, credentials: 'include' });
+                        const retryText = await retryRes.text();
+                        return retryText ? JSON.parse(retryText) : {};
+                    }
+                } catch {
+                    // Refresh failed — redirect to login
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('auth_user');
+                    window.location.href = '/auth/login';
+                }
             }
             throw new Error(data.error || 'Request failed');
         }
@@ -138,6 +158,29 @@ export const api = {
     // Leaderboard
     async getLeaderboard(sessionId: string, limit = 10) {
         return this.get(`sessions/${sessionId}/leaderboard?limit=${limit}`);
+    },
+
+    // Dashboard
+    async getDashboardStats() {
+        return this.get('analytics/dashboard');
+    },
+
+    // Export
+    async exportSession(sessionId: string, format: 'csv' | 'json' = 'json') {
+        return this.get(`analytics/${sessionId}/export?format=${format}`);
+    },
+
+    // Admin
+    async getUsers() {
+        return this.get('admin/users');
+    },
+
+    async updateUserRole(userId: string, role: string) {
+        return this.patch(`admin/users/${userId}/role`, { role });
+    },
+
+    async getAdminAuditLogs() {
+        return this.get('admin/audit-logs');
     },
 };
 

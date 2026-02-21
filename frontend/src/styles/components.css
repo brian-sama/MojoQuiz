@@ -1,0 +1,203 @@
+/* ============================================
+   ENTERPRISE UI COMPONENTS (Modularized)
+   ============================================ */
+
+/* Data Tables */
+.data-table-container {
+    background: var(--color-bg-alt);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    box-shadow: var(--shadow-z2);
+}
+
+.table-controls {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.search-input-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.data-table th {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--color-bg-alt);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    border-bottom: 2px solid var(--color-border);
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.data-table th:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-primary);
+}
+
+.data-table td {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.9375rem;
+    color: var(--color-text-primary);
+    vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:hover {
+    background: var(--color-bg-hover);
+}
+
+.table-sort-icon {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 10px;
+    vertical-align: middle;
+    opacity: 0.5;
+}
+
+.table-sort-icon.active {
+    opacity: 1;
+    color: var(--color-primary);
+}
+
+/* Status Badges */
+.badge-mode {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+}
+
+.badge-mode-quiz {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.badge-mode-poll {
+    border-color: var(--color-secondary);
+    color: var(--color-secondary);
+}
+
+.action-cell {
+    white-space: nowrap;
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+}
+
+/* ============================================
+   MOBILE PARTICIPANT UX
+   ============================================ */
+
+/* Accessible Option Buttons (Min 44px click target) */
+.option-btn {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 56px;
+    /* >44px for accessibility */
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 2px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: white;
+    text-align: left;
+    gap: var(--spacing-md);
+    cursor: pointer;
+    transition: transform var(--transition-fast), border-color var(--transition-fast);
+    -webkit-user-select: none;
+    user-select: none;
+    box-shadow: var(--shadow-z1);
+}
+
+.option-btn:active {
+    transform: scale(0.98);
+}
+
+.option-btn.selected {
+    border-color: var(--color-text-primary);
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text-primary);
+}
+
+.option-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Sticky Action Bar for Mobile Submissions */
+.sticky-action-bar {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--spacing-md);
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+    margin-top: auto;
+}
+
+.participant-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.participant-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-md);
+    padding-bottom: 80px;
+    /* Space for sticky bar */
+}
+
+/* Skeleton Loaders for Enterprise Feel */
+.skeleton-pulse {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+    background-color: var(--color-bg-hover);
+    border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}

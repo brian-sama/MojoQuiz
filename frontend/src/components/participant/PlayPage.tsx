@@ -352,9 +352,10 @@ function PlayPage() {
     if (loading) {
         return (
             <div className="page page-centered">
-                <div className="text-center">
-                    <div className="animate-pulse mb-md emoji-large">Offline</div>
-                    <p>Loading session...</p>
+                <div className="card w-full max-w-md p-xl">
+                    <div className="skeleton-pulse mb-md" style={{ height: '40px', width: '60%', margin: '0 auto' }}></div>
+                    <div className="skeleton-pulse mb-sm" style={{ height: '20px', width: '80%', margin: '0 auto' }}></div>
+                    <div className="skeleton-pulse" style={{ height: '20px', width: '40%', margin: '0 auto' }}></div>
                 </div>
             </div>
         );
@@ -364,8 +365,8 @@ function PlayPage() {
     if (error) {
         return (
             <div className="page page-centered">
-                <div className="card text-center">
-                    <div className="emoji-large mb-md">Not Found</div>
+                <div className="card text-center w-full max-w-md p-xl">
+                    <div className="emoji-large mb-md text-error">⚠️</div>
                     <h3>Oops!</h3>
                     <p className="text-muted mt-md">{error}</p>
                     <button
@@ -382,18 +383,26 @@ function PlayPage() {
     // Waiting state
     if (waiting || !activeQuestion) {
         return (
-            <div className="page page-centered">
-                <div className="text-center">
-                    <h2 className="mb-md">{sessionTitle || 'Loading...'}</h2>
-                    <div className="animate-pulse mb-lg emoji-xlarge">Waiting...</div>
-                    <p className="text-muted">Waiting for the host to start...</p>
-                    <p className="text-muted mt-md text-sm">
-                        {participantCount} participant{participantCount !== 1 ? 's' : ''} online
-                    </p>
-                    {!isConnected && (
-                        <p className="text-warning mt-md">Reconnecting...</p>
-                    )}
-                </div>
+            <div className="page page-centered participant-container">
+                <header className="participant-header">
+                    <div>
+                        <h3 className="text-sm font-semibold">{sessionTitle || 'MojoQuiz'}</h3>
+                        <div className="text-xs text-muted">Join Code: {code?.toUpperCase()}</div>
+                    </div>
+                </header>
+
+                <main className="participant-main" style={{ justifyContent: 'center', alignItems: 'center' }}>
+                    <div className="card text-center p-xl w-full max-w-md animate-slide-up">
+                        <div className="skeleton-pulse mb-lg mx-auto" style={{ height: '120px', width: '120px', borderRadius: '50%' }}></div>
+                        <h2 className="mb-md">Waiting for host...</h2>
+                        <p className="text-muted text-sm">
+                            {participantCount} participant{participantCount !== 1 ? 's' : ''} online
+                        </p>
+                        {!isConnected && (
+                            <p className="text-warning mt-md">Reconnecting...</p>
+                        )}
+                    </div>
+                </main>
             </div>
         );
     }

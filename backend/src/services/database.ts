@@ -890,15 +890,13 @@ export default {
   showResults,
   getActiveQuestion,
 
-  // Response
-  // Result Utilities
+  // Response & Result Utilities
   getResponseCount,
   getPollResults,
   getScaleStatistics,
   getRankingResults,
   getPinImageResults,
   getSessionReport,
-
   submitResponse,
 
   // Word Cloud
@@ -944,4 +942,183 @@ export default {
   createAuthToken,
   getValidAuthToken,
   markAuthTokenUsed,
+
+  // Refresh Token (hashed)
+  createRefreshToken,
+  getActiveRefreshTokens,
+  revokeRefreshTokenById,
+  revokeAllUserRefreshTokens,
+
+  // Dashboard Stats
+  getDashboardStats,
+  getSessionStats,
+
+  // Admin
+  getUsers,
+  getAuditLogs,
+  getOrganizationById,
 };
+
+// ============================================
+// REFRESH TOKEN OPERATIONS (Hashed)
+// ============================================
+
+export async function createRefreshToken(userId: string, tokenHash: string, expiresAt: Date) {
+  const result = await sql`
+    INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+    VALUES (${userId}, ${tokenHash}, ${expiresAt})
+    RETURNING *
+  `;
+  return result[0];
+}
+
+/**
+ * Get all active (non-revoked, non-expired) refresh tokens for bcrypt comparison.
+ * Returns token_hash + user metadata for matching.
+ */
+export async function getActiveRefreshTokens() {
+  const result = await sql`
+    SELECT rt.id, rt.token_hash, rt.user_id, rt.expires_at, rt.is_revoked, u.role as user_role
+    FROM refresh_tokens rt
+    JOIN users u ON rt.user_id = u.id
+    WHERE rt.is_revoked = false AND rt.expires_at > NOW()
+    ORDER BY rt.created_at DESC
+    LIMIT 500
+  `;
+  return result;
+}
+
+export async function revokeRefreshTokenById(tokenId: string) {
+  await sql`UPDATE refresh_tokens SET is_revoked = true WHERE id = ${tokenId}`;
+}
+
+export async function revokeAllUserRefreshTokens(userId: string) {
+  await sql`UPDATE refresh_tokens SET is_revoked = true WHERE user_id = ${userId}`;
+}
+
+// ============================================
+// AUDIT LOG OPERATIONS
+// ============================================
+
+export async function createAuditLog(actorId: string, action: string, metadata: Record<string, unknown> = {}) {
+  const result = await sql`
+    INSERT INTO audit_logs (actor_id, action, metadata)
+    VALUES (${actorId}, ${action}, ${JSON.stringify(metadata)})
+    RETURNING *
+  `;
+  return result[0];
+}
+
+// ============================================
+// DASHBOARD STATS
+// ============================================
+
+/**
+ * Get aggregated stats for the dashboard hero cards
+ */
+export async function getDashboardStats(userId: string) {
+  const stats = await sql`
+    SELECT
+      COUNT(DISTINCT s.id)::int AS total_sessions,
+      COALESCE(SUM(CASE WHEN s.status = 'active' THEN 1 ELSE 0 END), 0)::int AS active_drafts,
+      COALESCE((
+        SELECT COUNT(DISTINCT p.id)::int
+        FROM participants p
+        JOIN sessions s2 ON p.session_id = s2.id
+        WHERE s2.user_id = ${userId} AND s2.is_deleted = false
+      ), 0) AS total_participants,
+      COALESCE((
+        SELECT ROUND(AVG(p2.total_score)::numeric, 1)
+        FROM participants p2
+        JOIN sessions s3 ON p2.session_id = s3.id
+        WHERE s3.user_id = ${userId} AND s3.is_deleted = false AND p2.total_score > 0
+      ), 0) AS avg_engagement_score
+    FROM sessions s
+    WHERE s.user_id = ${userId} AND s.is_deleted = false
+  `;
+  return stats[0] || { total_sessions: 0, active_drafts: 0, total_participants: 0, avg_engagement_score: 0 };
+}
+
+/**
+ * Get session-level stats for analytics
+ */
+export async function getSessionStats(sessionId: string) {
+  const stats = await sql`
+    SELECT
+      COUNT(DISTINCT p.id)::int AS participant_count,
+      COALESCE(AVG(p.total_score)::numeric, 0) AS avg_score,
+      COUNT(DISTINCT r.id)::int AS total_responses
+    FROM sessions s
+    LEFT JOIN participants p ON p.session_id = s.id AND p.is_removed = false
+    LEFT JOIN responses r ON r.session_id = s.id
+    WHERE s.id = ${sessionId}
+  `;
+  return stats[0] || { participant_count: 0, avg_score: 0, total_responses: 0 };
+}
+
+/**
+ * Get vote/response results per question for analytics
+ */
+export async function getSessionVoteResults(sessionId: string) {
+  const rows = await sql`
+    SELECT
+      q.id,
+      q.question_text,
+      q.question_type,
+      COUNT(r.id)::int AS response_count
+    FROM questions q
+    LEFT JOIN responses r ON r.question_id = q.id
+    WHERE q.session_id = ${sessionId} AND q.is_deleted = false
+    GROUP BY q.id, q.question_text, q.question_type
+    ORDER BY q.display_order
+  `;
+  return rows;
+}
+
+/**
+ * Get all users, optionally filtered by organization
+ */
+export async function getUsers(organizationId?: string): Promise<User[]> {
+  if (organizationId) {
+    const rows = await sql`
+      SELECT * FROM users WHERE organization_id = ${organizationId} ORDER BY created_at DESC
+    `;
+    return rows as User[];
+  }
+  const rows = await sql`SELECT * FROM users ORDER BY created_at DESC`;
+  return rows as User[];
+}
+
+/**
+ * Get recent audit logs, optionally filtered by organization
+ */
+export async function getAuditLogs(organizationId?: string, limit: number = 100): Promise<any[]> {
+  if (organizationId) {
+    const rows = await sql`
+      SELECT al.*, u.display_name as actor_name, u.email as actor_email
+      FROM audit_logs al
+      JOIN users u ON al.actor_id = u.id
+      WHERE u.organization_id = ${organizationId}
+      ORDER BY al.created_at DESC
+      LIMIT ${limit}
+    `;
+    return rows;
+  }
+  const rows = await sql`
+    SELECT al.*, u.display_name as actor_name, u.email as actor_email
+    FROM audit_logs al
+    JOIN users u ON al.actor_id = u.id
+    ORDER BY al.created_at DESC
+    LIMIT ${limit}
+  `;
+  return rows;
+}
+
+/**
+ * Get organization details by ID
+ */
+export async function getOrganizationById(id: string): Promise<any | null> {
+  const result = await sql`SELECT * FROM organizations WHERE id = ${id}`;
+  return result[0] || null;
+}
+

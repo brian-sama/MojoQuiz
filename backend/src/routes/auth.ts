@@ -1,47 +1,64 @@
 import express, { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 import db from '../services/database.js';
+import { TokenService } from '../services/TokenService.js';
 import { emailService } from '../services/emailService.js';
 import { sanitizeInput } from '../utils/helpers.js';
+import { authorize, type AuthRequest } from '../middleware/rbac.js';
+import logger from '../utils/logger.js';
 
 const router: Router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+
+const REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
+
+// ============================================
+// Zod Validation Schemas
+// ============================================
+
+const RegisterSchema = z.object({
+    email: z.string().email('Invalid email format').max(255),
+    password: z.string().min(8, 'Password must be at least 8 characters').max(128).optional(),
+    displayName: z.string().min(2, 'Display name must be at least 2 characters').max(100).optional(),
+});
+
+const LoginSchema = z.object({
+    email: z.string().email('Invalid email format').max(255),
+    password: z.string().min(1, 'Password is required').max(128),
+});
+
+const ForgotPasswordSchema = z.object({
+    email: z.string().email('Invalid email format').max(255),
+});
+
+const ResetPasswordSchema = z.object({
+    email: z.string().email('Invalid email format').max(255),
+    code: z.string().length(6, 'Code must be 6 digits'),
+    newPassword: z.string().min(8, 'Password must be at least 8 characters').max(128),
+});
 
 /**
- * Register (Simplified - No OTP)
- * POST /api/auth/register
+ * Register
  */
 router.post('/register', async (req: Request, res: Response) => {
     try {
-        const { email, password, displayName } = req.body;
-
-        if (!email) {
-            return res.status(400).json({ error: 'Email is required' });
+        const validation = RegisterSchema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ error: validation.error.issues[0].message });
         }
+
+        const { email, password, displayName } = validation.data;
 
         const existingUser = await db.getUserByEmail(email);
+        if (existingUser) return res.status(400).json({ error: 'User already exists' });
 
-        // If user already exists, return "User already exists" error.
-        // This is caught by the frontend to switch to the password step.
-        if (existingUser) {
-            return res.status(400).json({ error: 'User already exists' });
-        }
-
-        // If it's just an existence check from the login page, return success.
-        // If it's a registration attempt, ensure all fields are present.
         if (!password || !displayName) {
-            return res.status(200).json({
-                message: 'New user check successful',
-                requiresSetup: true
-            });
+            return res.status(200).json({ message: 'New user check successful', requiresSetup: true });
         }
 
-        // Hash password
-        const passwordHash = await bcrypt.hash(password, 10);
+        const passwordHash = await bcrypt.hash(password, 12);
         const name = sanitizeInput(displayName);
 
-        // Create verified user immediately
         const user = await db.createUser({
             email: email.toLowerCase(),
             password_hash: passwordHash,
@@ -51,11 +68,20 @@ router.post('/register', async (req: Request, res: Response) => {
             role: 'user'
         });
 
-        // Generate Token
-        const jwtToken = jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        const accessToken = TokenService.generateAccessToken(user.id, user.role);
+        const refreshToken = await TokenService.generateRefreshToken(user.id);
+
+        await db.createAuditLog(user.id, 'USER_REGISTERED', { email: user.email });
+
+        res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         res.json({
-            token: jwtToken,
+            accessToken,
             user: {
                 id: user.id,
                 email: user.email,
@@ -65,34 +91,45 @@ router.post('/register', async (req: Request, res: Response) => {
         });
 
     } catch (error) {
-        console.error('Registration error:', error);
+        logger.error({ error }, 'Registration error');
         res.status(500).json({ error: 'Failed to create account' });
     }
 });
 
 /**
  * Login
- * POST /api/auth/login
  */
 router.post('/login', async (req: Request, res: Response) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+        const validation = LoginSchema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ error: validation.error.issues[0].message });
+        }
+
+        const { email, password } = validation.data;
 
         const user = await db.getUserByEmail(email);
-        if (!user || !user.password_hash || !user.is_verified) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
+        if (!user || !user.password_hash) return res.status(401).json({ error: 'Invalid credentials' });
 
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
         await db.updateUser(user.id, { last_login_at: new Date() });
 
-        const jwtToken = jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        const accessToken = TokenService.generateAccessToken(user.id, user.role);
+        const refreshToken = await TokenService.generateRefreshToken(user.id);
+
+        await db.createAuditLog(user.id, 'USER_LOGIN', { email: user.email });
+
+        res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         res.json({
-            token: jwtToken,
+            accessToken,
             user: {
                 id: user.id,
                 email: user.email,
@@ -101,28 +138,65 @@ router.post('/login', async (req: Request, res: Response) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error);
+        logger.error({ error }, 'Login error');
         res.status(500).json({ error: 'Failed to login' });
     }
 });
 
 /**
+ * Token Refresh
+ */
+router.post('/refresh', async (req: Request, res: Response) => {
+    try {
+        const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE_NAME];
+        if (!refreshToken) return res.status(401).json({ error: 'Refresh token missing' });
+
+        const { accessToken, refreshToken: newRefreshToken } = await TokenService.rotateTokens(refreshToken);
+
+        res.cookie(REFRESH_TOKEN_COOKIE_NAME, newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.json({ accessToken });
+    } catch (error) {
+        logger.error({ error }, 'Refresh token error');
+        res.clearCookie(REFRESH_TOKEN_COOKIE_NAME);
+        res.status(401).json({ error: error instanceof Error ? error.message : 'Failed to refresh token' });
+    }
+});
+
+/**
+ * Logout
+ */
+router.post('/logout', async (req: Request, res: Response) => {
+    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE_NAME];
+    if (refreshToken) {
+        await TokenService.revokeToken(refreshToken);
+    }
+    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME);
+    res.json({ success: true });
+});
+
+/**
  * Forgot Password
- * POST /api/auth/forgot-password
  */
 router.post('/forgot-password', async (req: Request, res: Response) => {
     try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'Email is required' });
-
-        const user = await db.getUserByEmail(email);
-        if (!user) {
-            // Don't reveal if user exists
-            return res.json({ message: 'If an account exists, a reset code has been sent' });
+        const validation = ForgotPasswordSchema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ error: validation.error.issues[0].message });
         }
 
+        const { email } = validation.data;
+
+        const user = await db.getUserByEmail(email);
+        if (!user) return res.json({ message: 'If an account exists, a reset code has been sent' });
+
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
         await db.createAuthToken({
             user_id: user.id,
@@ -133,24 +207,24 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
         });
 
         await emailService.sendPasswordReset(email, code);
-
         res.json({ message: 'If an account exists, a reset code has been sent' });
     } catch (error) {
-        console.error('Forgot password error:', error);
+        logger.error({ error }, 'Forgot password error');
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
 
 /**
  * Reset Password
- * POST /api/auth/reset-password
  */
 router.post('/reset-password', async (req: Request, res: Response) => {
     try {
-        const { email, code, newPassword } = req.body;
-        if (!email || !code || !newPassword) {
-            return res.status(400).json({ error: 'Email, code, and new password are required' });
+        const validation = ResetPasswordSchema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ error: validation.error.issues[0].message });
         }
+
+        const { email, code, newPassword } = validation.data;
 
         const token = await db.getValidAuthToken(email, code, 'password_reset');
         if (!token) return res.status(400).json({ error: 'Invalid or expired code' });
@@ -158,29 +232,28 @@ router.post('/reset-password', async (req: Request, res: Response) => {
         const user = await db.getUserByEmail(email);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        const passwordHash = await bcrypt.hash(newPassword, 10);
+        const passwordHash = await bcrypt.hash(newPassword, 12);
         await db.updateUser(user.id, { password_hash: passwordHash });
         await db.markAuthTokenUsed(token.id);
 
+        // Revoke all existing refresh tokens (force re-login)
+        await TokenService.revokeAllUserTokens(user.id);
+
+        await db.createAuditLog(user.id, 'PASSWORD_RESET', { email: user.email });
+
         res.json({ message: 'Password reset successful' });
     } catch (error) {
-        console.error('Reset password error:', error);
+        logger.error({ error }, 'Reset password error');
         res.status(500).json({ error: 'Failed to reset password' });
     }
 });
 
 /**
- * Get Me
- * GET /api/auth/me
+ * Get Me (current user profile)
  */
-router.get('/me', async (req: any, res: Response) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'No token provided' });
-
-    const token = authHeader.split(' ')[1];
+router.get('/me', authorize(), async (req: AuthRequest, res: Response) => {
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        const user = await db.getUserById(decoded.userId);
+        const user = await db.getUserById(req.user!.id);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         res.json({
@@ -191,7 +264,7 @@ router.get('/me', async (req: any, res: Response) => {
             role: user.role
         });
     } catch (err) {
-        res.status(401).json({ error: 'Invalid token' });
+        res.status(500).json({ error: 'Server error' });
     }
 });
 

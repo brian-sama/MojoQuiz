@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /host
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /library
+Disallow: /analytics
+
+Sitemap: https://mojoquiz.co.zw/sitemap.xml

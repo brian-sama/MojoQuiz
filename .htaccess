@@ -1,4 +1,4 @@
-# Apache .htaccess for SPA + API routing
+# Apache .htaccess for SPA routing
 
 # Enable rewrite engine
 RewriteEngine On
@@ -20,25 +20,14 @@ RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Rewrite API requests to PHP files
-RewriteRule ^api/sessions(.*)$ api/sessions.php?action=$1 [L,QSA]
-RewriteRule ^api/questions(.*)$ api/questions.php?action=$1 [L,QSA]
-RewriteRule ^api/responses(.*)$ api/responses.php?action=$1 [L,QSA]
-RewriteRule ^api/participants(.*)$ api/participants.php?action=$1 [L,QSA]
-
-# Rewrite everything else to index.html (SPA routing)
+# SPA Routing: Rewrite everything else to index.html
 RewriteRule ^ index.html [L]
 
 # Prevent access to sensitive files
-<FilesMatch "\.(sql|md|env)$">
+<FilesMatch "\.(sql|md|env|json|yaml)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
-
-# PHP settings (optional - uncomment if needed)
-# php_value upload_max_filesize 10M
-# php_value post_max_size 10M
-# php_value max_execution_time 300
 
 # Gzip compression
 <IfModule mod_deflate.c>

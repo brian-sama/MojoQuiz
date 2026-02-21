@@ -6,6 +6,7 @@ interface User {
     email: string;
     displayName: string;
     avatarUrl?: string;
+    role?: string;
 }
 
 interface AuthContextType {
@@ -30,20 +31,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (savedToken && savedUser) {
             try {
-                // Check if token is expired
                 const decoded: any = jwtDecode(savedToken);
                 if (decoded.exp * 1000 < Date.now()) {
-                    logout();
+                    // Token expired — attempt silent refresh
+                    attemptRefresh();
                 } else {
                     setToken(savedToken);
                     setUser(JSON.parse(savedUser));
                 }
-            } catch (err) {
+            } catch {
                 logout();
             }
         }
         setLoading(false);
     }, []);
+
+    const attemptRefresh = async () => {
+        try {
+            const apiBase = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${apiBase}/api/auth/refresh`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setToken(data.accessToken);
+                localStorage.setItem('auth_token', data.accessToken);
+                // User info is already in localStorage, keep it
+                const savedUser = localStorage.getItem('auth_user');
+                if (savedUser) setUser(JSON.parse(savedUser));
+            } else {
+                logout();
+            }
+        } catch {
+            logout();
+        }
+    };
 
     const login = (newToken: string, newUser: User) => {
         setToken(newToken);
