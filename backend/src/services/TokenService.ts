@@ -6,7 +6,7 @@ import logger from '../utils/logger.js';
 
 const JWT_ACCESS_SECRET = (process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET) as string;
 const JWT_REFRESH_SECRET = (process.env.JWT_REFRESH_SECRET || JWT_ACCESS_SECRET) as string;
-const ACCESS_TOKEN_EXPIRY = '15m';
+const ACCESS_TOKEN_EXPIRY = '7d';
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 
 if (!JWT_ACCESS_SECRET) {

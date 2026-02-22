@@ -23,6 +23,7 @@ import Dashboard from './components/presenter/Dashboard';
 import CreateSession from './pages/presenter/CreateSession';
 import HostSession from './components/presenter/HostSession';
 import AnalyticsPage from './pages/presenter/AnalyticsPage';
+import LibraryPage from './pages/presenter/LibraryPage';
 import AdminPage from './pages/admin/AdminPage';
 
 // SEO & Public
@@ -38,8 +39,6 @@ function App() {
                 <Route path="/join" element={<JoinPage />} />
                 <Route path="/join/:code" element={<JoinPage />} />
                 <Route path="/play/:code" element={<PlayPage />} />
-
-                {/* Authentication */}
                 <Route path="/auth/login" element={<LoginPage />} />
                 <Route path="/auth/register" element={<RegisterPage />} />
                 <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
@@ -92,8 +91,24 @@ function App() {
                     }
                 />
 
-                {/* ===== BACKWARD COMPAT REDIRECTS ===== */}
-                <Route path="/library" element={<Navigate to="/dashboard" replace />} />
+                <Route
+                    path="/library"
+                    element={
+                        <ProtectedRoute>
+                            <SEOHead noindex />
+                            <LibraryPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/templates"
+                    element={
+                        <ProtectedRoute>
+                            <SEOHead noindex />
+                            <LibraryPage defaultTab="templates" />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route path="/host" element={<Navigate to="/dashboard" replace />} />
 
                 {/* Catch-all */}

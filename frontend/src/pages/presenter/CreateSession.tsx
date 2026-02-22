@@ -1,17 +1,13 @@
 /**
  * CreateSession — Multi-step Session Wizard
- *
- * Step 1: Title + Description + Mode
- * Step 2: Add Questions
- * Step 3: Preview
- * Step 4: Launch or Save as Draft
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
-import AppLayout from '../../layouts/AppLayout';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type SessionMode = 'engagement' | 'quiz' | 'mixed';
 
@@ -52,7 +48,7 @@ function CreateSession() {
     const canProceed = () => {
         switch (step) {
             case 1: return title.trim().length >= 3;
-            case 2: return true; // Questions are optional for draft
+            case 2: return true;
             case 3: return true;
             default: return false;
         }
@@ -103,208 +99,213 @@ function CreateSession() {
     };
 
     return (
-        <AppLayout>
-            <div className="wizard-container">
-                {/* Progress indicator */}
-                <div className="step-indicator-track">
-                    {Array.from({ length: totalSteps }, (_, i) => (
-                        <div
-                            key={i}
-                            className={`step-indicator ${i + 1 <= step ? 'step-indicator-active' : ''}`}
-                        />
-                    ))}
-                </div>
-
-                <p className="text-muted mb-lg text-sm">
-                    Step {step} of {totalSteps}
-                </p>
-
-                {/* Step 1: Basic Info */}
-                {step === 1 && (
-                    <div className="card p-lg">
-                        <h2 className="mb-md">Create a New Session</h2>
-
-                        <div className="mb-md">
-                            <label className="form-label">Session Title *</label>
-                            <input
-                                type="text"
-                                className="input"
-                                placeholder="e.g., Team Retrospective Q1"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                maxLength={100}
-                                autoFocus
-                            />
-                        </div>
-
-                        <div className="mb-md">
-                            <label className="form-label">Description (optional)</label>
-                            <textarea
-                                className="input textarea-resizable"
-                                placeholder="What's this session about?"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                rows={3}
-                                maxLength={500}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="form-label">Session Mode</label>
-                            <div className="grid grid-cols-3 gap-sm">
-                                {MODES.map(m => (
-                                    <button
-                                        key={m.value}
-                                        type="button"
-                                        onClick={() => setMode(m.value)}
-                                        className={`mode-card ${mode === m.value ? 'mode-card-active' : ''}`}
-                                    >
-                                        <div className="text-2xl mb-xs">{m.icon}</div>
-                                        <div className="text-bold text-sm">{m.label}</div>
-                                        <div className="text-xs text-muted mt-xs">{m.desc}</div>
-                                    </button>
-                                ))}
-                            </div>
+        <DashboardLayout>
+            <div className="wizard-container max-w-md mx-auto">
+                {/* Header */}
+                <header className="mb-xl">
+                    <h1 className="text-3xl font-bold mb-xs">Create New Session</h1>
+                    <div className="flex justify-between items-center">
+                        <p className="text-muted text-sm">Step {step} of {totalSteps}</p>
+                        <div className="flex gap-xs w-48 h-1 bg-border rounded-full overflow-hidden">
+                            {Array.from({ length: totalSteps }, (_, i) => (
+                                <div
+                                    key={i}
+                                    className={`flex-1 transition-all duration-300 ${i + 1 <= step ? 'bg-primary' : 'bg-transparent'}`}
+                                />
+                            ))}
                         </div>
                     </div>
-                )}
+                </header>
 
-                {/* Step 2: Add Questions */}
-                {step === 2 && (
-                    <div className="card p-lg">
-                        <h2 className="mb-xs">Add Questions</h2>
-                        <p className="text-muted mb-md">
-                            You can also add questions later in the session editor.
-                        </p>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={step}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                    >
+                        {/* Step 1: Basic Info */}
+                        {step === 1 && (
+                            <div className="card shadow-premium p-xl">
+                                <div className="mb-lg">
+                                    <label className="form-label mb-sm block text-sm font-bold">Session Title *</label>
+                                    <input
+                                        type="text"
+                                        className="input text-lg"
+                                        placeholder="e.g., Team Retrospective Q1"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        maxLength={100}
+                                        autoFocus
+                                    />
+                                </div>
 
-                        {/* Question list */}
-                        {questions.length > 0 && (
-                            <div className="mb-md">
-                                {questions.map((q, i) => (
-                                    <div key={q.id} className="flex items-center justify-between question-draft-item">
-                                        <div className="flex items-center gap-sm">
-                                            <span className="text-muted text-xs text-bold">Q{i + 1}</span>
-                                            <span className="text-sm">{q.question_text}</span>
-                                            <span className="status-badge status-badge-draft text-tiny">{q.question_type}</span>
-                                        </div>
-                                        <button className="btn btn-danger btn-small btn-tiny" onClick={() => removeQuestion(q.id)}>
-                                            ×
+                                <div className="mb-lg">
+                                    <label className="form-label mb-sm block text-sm font-bold">Description (optional)</label>
+                                    <textarea
+                                        className="input text-sm"
+                                        placeholder="What's this session about?"
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        rows={3}
+                                        maxLength={500}
+                                    />
+                                </div>
+
+                                <div className="mb-md">
+                                    <label className="form-label mb-sm block text-sm font-bold">Session Mode</label>
+                                    <div className="grid grid-cols-3 gap-md">
+                                        {MODES.map(m => (
+                                            <button
+                                                key={m.value}
+                                                type="button"
+                                                onClick={() => setMode(m.value)}
+                                                className={`mode-card p-md rounded-xl transition-all border-2 ${mode === m.value ? 'bg-primary/5 border-primary shadow-glow' : 'bg-transparent border-border hover:border-gray-300'}`}
+                                            >
+                                                <div className="text-2xl mb-sm">{m.icon}</div>
+                                                <div className="font-bold text-sm block">{m.label}</div>
+                                                <div className="text-[10px] leading-tight text-muted mt-sm opacity-80">{m.desc}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 2: Add Questions */}
+                        {step === 2 && (
+                            <div className="card shadow-premium p-xl">
+                                <h3 className="font-bold mb-md">Build your session</h3>
+
+                                {questions.length > 0 && (
+                                    <div className="flex flex-col gap-sm mb-lg max-h-64 overflow-y-auto pr-xs">
+                                        {questions.map((q, i) => (
+                                            <div key={q.id} className="flex items-center justify-between p-md bg-bg-alt rounded-xl border border-border">
+                                                <div className="flex items-center gap-md">
+                                                    <span className="text-primary font-bold text-xs bg-primary/10 w-6 h-6 flex items-center justify-center rounded">Q{i + 1}</span>
+                                                    <span className="text-sm font-medium line-clamp-1">{q.question_text}</span>
+                                                    <span className="text-[9px] uppercase font-bold text-muted bg-border px-sm rounded py-0.5">{q.question_type}</span>
+                                                </div>
+                                                <button className="text-muted hover:text-error transition-colors text-sm" onClick={() => removeQuestion(q.id)}>
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col gap-md">
+                                    <label className="form-label text-sm font-bold">Add a question</label>
+                                    <div className="flex gap-sm">
+                                        <select
+                                            className="input w-32 flex-shrink-0 text-sm"
+                                            value={newQuestionType}
+                                            onChange={(e) => setNewQuestionType(e.target.value)}
+                                            title="Select Question Type"
+                                        >
+                                            <option value="poll">Poll</option>
+                                            <option value="quiz_mc">Quiz MC</option>
+                                            <option value="word_cloud">Word Cloud</option>
+                                            <option value="open_ended">Open Ended</option>
+                                            <option value="scale">Scale</option>
+                                            <option value="nps">NPS</option>
+                                        </select>
+                                        <input
+                                            type="text"
+                                            className="input flex-1"
+                                            placeholder="Enter your question text..."
+                                            value={newQuestion}
+                                            onChange={(e) => setNewQuestion(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && addQuestion()}
+                                        />
+                                        <button className="btn btn-secondary btn-icon" onClick={addQuestion} disabled={!newQuestion.trim()}>
+                                            ➕
                                         </button>
                                     </div>
-                                ))}
+                                </div>
                             </div>
                         )}
 
-                        {/* Add question form */}
-                        <div className="flex gap-sm">
-                            <select
-                                className="input w-120 flex-shrink-0"
-                                value={newQuestionType}
-                                onChange={(e) => setNewQuestionType(e.target.value)}
-                                title="Select Question Type"
-                            >
-                                <option value="poll">Poll</option>
-                                <option value="quiz_mc">Quiz MC</option>
-                                <option value="word_cloud">Word Cloud</option>
-                                <option value="open_ended">Open Ended</option>
-                                <option value="scale">Scale</option>
-                                <option value="nps">NPS</option>
-                            </select>
-                            <input
-                                type="text"
-                                className="input"
-                                placeholder="Enter your question..."
-                                value={newQuestion}
-                                onChange={(e) => setNewQuestion(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && addQuestion()}
-                            />
-                            <button className="btn btn-primary btn-small" onClick={addQuestion} disabled={!newQuestion.trim()}>
-                                Add
-                            </button>
-                        </div>
-                    </div>
-                )}
+                        {/* Step 3: Preview */}
+                        {step === 3 && (
+                            <div className="card shadow-premium p-xl">
+                                <h3 className="font-bold mb-lg">Review Details</h3>
 
-                {/* Step 3: Preview */}
-                {step === 3 && (
-                    <div className="card p-lg">
-                        <h2 className="mb-md">Preview</h2>
+                                <div className="space-y-lg">
+                                    <div className="p-md bg-bg-alt rounded-lg">
+                                        <span className="text-[10px] uppercase font-bold text-muted block mb-xs">Title</span>
+                                        <div className="text-xl font-bold">{title}</div>
+                                    </div>
 
-                        <div className="mb-md">
-                            <div className="stat-card-label">Title</div>
-                            <div className="text-bold text-lg">{title}</div>
-                        </div>
-
-                        {description && (
-                            <div className="mb-md">
-                                <div className="stat-card-label">Description</div>
-                                <p>{description}</p>
+                                    <div className="grid grid-cols-2 gap-md">
+                                        <div className="p-md bg-bg-alt rounded-lg">
+                                            <span className="text-[10px] uppercase font-bold text-muted block mb-xs">Mode</span>
+                                            <div className="font-semibold text-primary">{MODES.find(m => m.value === mode)?.label}</div>
+                                        </div>
+                                        <div className="p-md bg-bg-alt rounded-lg">
+                                            <span className="text-[10px] uppercase font-bold text-muted block mb-xs">Content</span>
+                                            <div className="font-semibold">{questions.length} Question{questions.length !== 1 ? 's' : ''}</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
-                        <div className="mb-md">
-                            <div className="stat-card-label">Mode</div>
-                            <div>{MODES.find(m => m.value === mode)?.label} {MODES.find(m => m.value === mode)?.icon}</div>
-                        </div>
+                        {/* Step 4: Finalize */}
+                        {step === 4 && (
+                            <div className="card shadow-premium p-xl text-center">
+                                <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center text-4xl mx-auto mb-lg">✨</div>
+                                <h2 className="text-2xl font-bold mb-md">Launch your session</h2>
+                                <p className="text-muted mb-xl mx-auto max-w-xs text-sm">
+                                    Everything looks good. You can go live immediately or save this for later.
+                                </p>
 
-                        <div>
-                            <div className="stat-card-label">Questions</div>
-                            <div>{questions.length > 0 ? `${questions.length} question(s)` : 'No questions added — you can add them later'}</div>
-                        </div>
-                    </div>
-                )}
+                                {error && (
+                                    <div className="p-md bg-error/10 text-error rounded-lg mb-lg text-sm">{error}</div>
+                                )}
 
-                {/* Step 4: Launch */}
-                {step === 4 && (
-                    <div className="card p-lg text-center">
-                        <h2 className="mb-md">Ready to Go! 🚀</h2>
-                        <p className="text-muted mb-lg">
-                            Your session "{title}" is ready. Launch it now or save as a draft.
-                        </p>
-
-                        {error && (
-                            <p className="mb-md text-error">{error}</p>
+                                <div className="flex flex-col gap-sm">
+                                    <button
+                                        className="btn btn-primary btn-large w-full shadow-glow"
+                                        onClick={() => handleLaunch(false)}
+                                        disabled={loading}
+                                    >
+                                        {loading ? 'Processing...' : '🎤 Launch Live Session'}
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary w-full"
+                                        onClick={() => handleLaunch(true)}
+                                        disabled={loading}
+                                    >
+                                        💾 Save as Draft
+                                    </button>
+                                </div>
+                            </div>
                         )}
+                    </motion.div>
+                </AnimatePresence>
 
-                        <div className="flex gap-md justify-center">
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => handleLaunch(false)}
-                                disabled={loading}
-                            >
-                                {loading ? 'Creating...' : '🎤 Go Live'}
-                            </button>
-                            <button
-                                className="btn btn-secondary"
-                                onClick={() => handleLaunch(true)}
-                                disabled={loading}
-                            >
-                                💾 Save as Draft
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Navigation */}
-                <div className="flex justify-between mt-lg">
+                {/* Footer Controls */}
+                <footer className="mt-xl flex justify-between">
                     <button
-                        className="btn btn-secondary"
+                        className="btn btn-secondary px-lg"
                         onClick={() => step === 1 ? navigate('/dashboard') : setStep(step - 1)}
                     >
-                        {step === 1 ? 'Cancel' : '← Back'}
+                        {step === 1 ? 'Cancel' : '← Previous'}
                     </button>
                     {step < totalSteps && (
                         <button
-                            className="btn btn-primary"
+                            className="btn btn-primary px-xl shadow-sm"
                             onClick={() => setStep(step + 1)}
                             disabled={!canProceed()}
                         >
-                            Next →
+                            Continue →
                         </button>
                     )}
-                </div>
+                </footer>
             </div>
-        </AppLayout>
+        </DashboardLayout>
     );
 }
 

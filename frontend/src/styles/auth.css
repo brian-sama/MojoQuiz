@@ -1,0 +1,198 @@
+/* Authentication Specific Styles */
+
+.auth-page-container {
+    min-height: 100vh;
+    display: flex;
+    background-color: var(--color-bg-alt, #f1f5f9);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Background Overlay Fix */
+.auth-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)),
+        url('../assets/background_srhr.jpg');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    z-index: 1;
+}
+
+/* Split Layout Panels */
+.auth-side-panel {
+    display: none;
+    width: 50%;
+    position: relative;
+    background: linear-gradient(135deg, #312e81, #4f46e5);
+    /* indigo-900 to indigo-600 */
+    color: white;
+    padding: 3rem;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 10;
+}
+
+@media (min-width: 1024px) {
+    .auth-side-panel {
+        display: flex;
+    }
+}
+
+.auth-form-panel {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    z-index: 10;
+}
+
+@media (min-width: 1024px) {
+    .auth-form-panel {
+        width: 50%;
+    }
+}
+
+/* Card Styling */
+.auth-card-container {
+    width: 100%;
+    max-width: 440px;
+}
+
+.auth-card {
+    background: white;
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 2.5rem;
+}
+
+/* Form Elements */
+.auth-form-group {
+    margin-bottom: 1.25rem;
+}
+
+.auth-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    /* gray-700 */
+    margin-bottom: 0.5rem;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    /* gray-300 */
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+    background: white;
+    color: #111827;
+    /* gray-900 */
+}
+
+.auth-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.auth-submit-btn {
+    width: 100%;
+    background-color: #4f46e5;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 1rem;
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+    background-color: #4338ca;
+}
+
+.auth-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Typography */
+.auth-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.025em;
+}
+
+.auth-subtitle {
+    color: #6b7280;
+    /* gray-500 */
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Logo Styling */
+.auth-logo-container {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 2rem;
+    width: max-content;
+}
+
+.auth-side-panel .auth-logo-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 1rem;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+}
+
+.auth-form-panel .auth-logo-container {
+    width: 100%;
+}
+
+.auth-logo-image {
+    display: block;
+    width: 220px;
+    height: auto;
+}
+
+.auth-logo-image-mobile {
+    width: 180px;
+}
+
+/* Links */
+.auth-link {
+    color: #4f46e5;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+}
+
+.auth-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+
+.mobile-only {
+    display: flex;
+}
+
+@media (min-width: 1024px) {
+    .mobile-only {
+        display: none;
+    }
+}

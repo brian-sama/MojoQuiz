@@ -107,6 +107,11 @@
   --shadow-z3: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-z4: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-glow: 0 0 20px 0 hsla(var(--color-primary-base), 0.3);
+  --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+
+  /* Gradients */
+  --grad-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  --grad-surface: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
 
   /* Semantic Mapping */
   --color-text: var(--color-text-primary);

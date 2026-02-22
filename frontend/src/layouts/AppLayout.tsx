@@ -5,6 +5,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import BrandLogo from '../components/common/BrandLogo';
 import './AppLayout.css';
 
 interface AppLayoutProps {
@@ -26,8 +27,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <div className="app-nav-inner">
                     <div className="app-nav-left">
                         <NavLink to="/dashboard" className="app-logo">
-                            <span className="app-logo-icon">🎯</span>
-                            <span className="app-logo-text">MojoQuiz</span>
+                            <BrandLogo variant="full" className="app-logo-image" />
                         </NavLink>
                         <nav className="app-nav-links">
                             <NavLink to="/dashboard" className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>

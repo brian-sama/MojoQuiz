@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">MojoQuiz Mark</title>
+  <desc id="desc">Rounded square gradient icon with white speech bubble and lightning bolt.</desc>
+  <defs>
+    <linearGradient id="mq-bg" x1="28" y1="24" x2="226" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2744b8"/>
+      <stop offset="0.56" stop-color="#5b2fc9"/>
+      <stop offset="1" stop-color="#8e18ef"/>
+    </linearGradient>
+    <linearGradient id="mq-bolt" x1="118" y1="88" x2="162" y2="168" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6a32c4"/>
+      <stop offset="1" stop-color="#4f1fb4"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="14" y="14" width="228" height="228" rx="56" fill="url(#mq-bg)"/>
+  <path
+    d="M127.5 56c40.6 0 73.5 32.9 73.5 73.5S168.1 203 127.5 203c-13.1 0-25.3-3.5-35.9-9.5L65 203l6.4-26.3A73.2 73.2 0 0 1 54 129.5C54 88.9 86.9 56 127.5 56Z"
+    fill="#ffffff"
+  />
+  <path
+    d="m141.9 88.6-24.3 37.5h20.2l-19.9 40.9 45.5-53.5h-21.1l-.4-24.9Z"
+    fill="url(#mq-bolt)"
+  />
+</svg>

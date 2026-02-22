@@ -1,24 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../hooks/useApi';
-import { useAuth } from '../../hooks/useAuth';
 
-type SortConfig = {
-    key: string;
-    direction: 'asc' | 'desc';
-};
+import DashboardLayout from '../../layouts/DashboardLayout';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const LibraryPage: React.FC = () => {
+const LibraryPage: React.FC<{ defaultTab?: 'my-sessions' | 'templates' }> = ({ defaultTab }) => {
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
     const [sessions, setSessions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState<'my-sessions' | 'templates'>('my-sessions');
+    const [activeTab, setActiveTab] = useState<'my-sessions' | 'templates'>(defaultTab || 'my-sessions');
 
     // Enterprise Data Table State
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'created_at', direction: 'desc' });
     const [filterMode, setFilterMode] = useState<string>('all');
 
     useEffect(() => {
@@ -39,7 +34,8 @@ const LibraryPage: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
         if (!window.confirm('Are you sure you want to delete this session?')) return;
         try {
             await api.delete(`/library/${id}`);
@@ -49,7 +45,8 @@ const LibraryPage: React.FC = () => {
         }
     };
 
-    const handleDuplicate = async (id: string) => {
+    const handleDuplicate = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
         try {
             const newSession = await api.post(`/library/${id}/duplicate`, {});
             setSessions([newSession, ...sessions]);
@@ -58,19 +55,9 @@ const LibraryPage: React.FC = () => {
         }
     };
 
-    // Sorting and Filtering Logic
-    const handleSort = (key: string) => {
-        let direction: 'asc' | 'desc' = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
-        setSortConfig({ key, direction });
-    };
-
-    const filteredAndSortedSessions = useMemo(() => {
+    const filteredSessions = useMemo(() => {
         let result = [...sessions];
 
-        // 1. Filter by Search Query
         if (searchQuery) {
             result = result.filter(s =>
                 s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -78,167 +65,131 @@ const LibraryPage: React.FC = () => {
             );
         }
 
-        // 2. Filter by Mode
         if (filterMode !== 'all') {
             result = result.filter(s => s.mode === filterMode);
         }
 
-        // 3. Sort
-        result.sort((a, b) => {
-            const valA = a[sortConfig.key];
-            const valB = b[sortConfig.key];
-
-            if (!valA || !valB) return 0;
-
-            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
-        });
-
         return result;
-    }, [sessions, searchQuery, sortConfig, filterMode]);
+    }, [sessions, searchQuery, filterMode]);
 
     return (
-        <div className="page">
-            <header className="auth-header py-md px-lg flex justify-between items-center bg-dark-soft border-b border-white-10">
-                <Link to="/host" className="logo-text text-lg">MojoQuiz</Link>
-                <div className="flex items-center gap-md">
-                    <span className="text-secondary text-sm">Hi, {user?.displayName}</span>
-                    <button onClick={logout} className="btn btn-secondary py-xs px-sm text-sm">Logout</button>
-                    {user?.avatarUrl && <img src={user.avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full" />}
+        <DashboardLayout>
+            <div className="library-header flex justify-between items-center mb-xl">
+                <div>
+                    <h1 className="text-3xl font-bold mb-xs">Your Library</h1>
+                    <p className="text-muted">Manage and launch your interactive sessions.</p>
                 </div>
-            </header>
+            </div>
 
-            <main className="container mt-xl" style={{ maxWidth: '1200px' }}>
-                <div className="flex justify-between items-center mb-lg">
-                    <h1 className="text-2xl font-bold">Session Library</h1>
-                    <Link to="/host" className="btn btn-primary">Create New Session</Link>
+            <div className="tabs mb-lg flex gap-md border-b border-border">
+                <button
+                    className={`tab-btn pb-sm px-sm font-semibold transition-all ${activeTab === 'my-sessions' ? 'text-primary border-b-2 border-primary' : 'text-muted hover:text-text'}`}
+                    onClick={() => setActiveTab('my-sessions')}
+                >
+                    My Sessions
+                </button>
+                <button
+                    className={`tab-btn pb-sm px-sm font-semibold transition-all ${activeTab === 'templates' ? 'text-primary border-b-2 border-primary' : 'text-muted hover:text-text'}`}
+                    onClick={() => setActiveTab('templates')}
+                >
+                    Sample Templates
+                </button>
+            </div>
+
+            <div className="library-controls mb-xl flex flex-wrap gap-md items-center">
+                <div className="search-box flex-1 min-w-[300px]">
+                    <input
+                        type="text"
+                        className="input"
+                        placeholder="Search sessions..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
-
-                <div className="tabs mb-lg border-b border-white-10">
-                    <button
-                        className={`tab-item pb-sm px-md ${activeTab === 'my-sessions' ? 'border-b-2 border-primary text-primary' : 'text-secondary font-medium'}`}
-                        onClick={() => setActiveTab('my-sessions')}
+                <div className="filter-box">
+                    <select
+                        className="input w-auto"
+                        value={filterMode}
+                        onChange={(e) => setFilterMode(e.target.value)}
+                        title="Filter by mode"
                     >
-                        My Sessions
-                    </button>
-                    <button
-                        className={`tab-item pb-sm px-md ${activeTab === 'templates' ? 'border-b-2 border-primary text-primary' : 'text-secondary font-medium'}`}
-                        onClick={() => setActiveTab('templates')}
-                    >
-                        Sample Templates
-                    </button>
+                        <option value="all">All Types</option>
+                        <option value="quiz">Quiz</option>
+                        <option value="poll">Poll</option>
+                        <option value="word_cloud">Word Cloud</option>
+                    </select>
                 </div>
+            </div>
 
-                {/* Table Controls */}
-                <div className="table-controls mb-md card p-md">
-                    <div className="search-input-wrapper flex-1">
-                        <input
-                            type="text"
-                            className="input"
-                            placeholder="Search by title or mode..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex gap-md">
-                        <select
-                            className="input w-auto"
-                            value={filterMode}
-                            onChange={(e) => setFilterMode(e.target.value)}
-                        >
-                            <option value="all">All Modes</option>
-                            <option value="quiz">Quiz</option>
-                            <option value="poll">Poll</option>
-                            <option value="word_cloud">Word Cloud</option>
-                        </select>
-                    </div>
+            {loading ? (
+                <div className="flex justify-center py-2xl">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
                 </div>
+            ) : error ? (
+                <div className="alert alert-error card p-md border-error text-error">{error}</div>
+            ) : filteredSessions.length === 0 ? (
+                <div className="empty-library card py-2xl text-center">
+                    <p className="text-muted mb-md">No sessions found matching your search.</p>
+                    <button onClick={() => { setSearchQuery(''); setFilterMode('all'); }} className="btn btn-secondary">Clear Filters</button>
+                </div>
+            ) : (
+                <div className="session-grid">
+                    <AnimatePresence>
+                        {filteredSessions.map((session) => (
+                            <motion.div
+                                key={session.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                whileHover={{ y: -5, boxShadow: 'var(--shadow-z4)' }}
+                                className="session-card group"
+                                onClick={() => navigate(`/host/${session.id}`)}
+                            >
+                                <div className="session-card-header mb-sm">
+                                    <h3 className="session-card-title font-bold text-lg group-hover:text-primary transition-colors">
+                                        {session.title}
+                                    </h3>
+                                    <span className={`status-badge status-badge-${session.status === 'active' ? 'active' : 'draft'}`}>
+                                        {session.status === 'active' ? 'Live' : 'Draft'}
+                                    </span>
+                                </div>
 
-                {loading ? (
-                    <div className="flex justify-center py-xl">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-                    </div>
-                ) : error ? (
-                    <div className="alert alert-error">{error}</div>
-                ) : filteredAndSortedSessions.length === 0 ? (
-                    <div className="text-center py-xl bg-dark-soft rounded-lg card">
-                        <p className="text-secondary mb-md">No sessions matching your criteria.</p>
-                        <button onClick={() => { setSearchQuery(''); setFilterMode('all'); }} className="btn btn-secondary">Clear Filters</button>
-                    </div>
-                ) : (
-                    <div className="data-table-container">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th onClick={() => handleSort('title')}>
-                                        Session Title
-                                        {sortConfig.key === 'title' && <span className="table-sort-icon active">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
-                                    </th>
-                                    <th onClick={() => handleSort('mode')}>
-                                        Mode
-                                        {sortConfig.key === 'mode' && <span className="table-sort-icon active">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
-                                    </th>
-                                    <th onClick={() => handleSort('created_at')}>
-                                        Created Date
-                                        {sortConfig.key === 'created_at' && <span className="table-sort-icon active">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}
-                                    </th>
-                                    <th className="text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredAndSortedSessions.map((session) => (
-                                    <tr key={session.id}>
-                                        <td className="font-bold">{session.title}</td>
-                                        <td>
-                                            <span className={`badge-mode badge-mode-${session.mode}`}>
-                                                {session.mode}
-                                            </span>
-                                        </td>
-                                        <td className="text-secondary text-sm">
-                                            {new Date(session.created_at).toLocaleDateString(undefined, {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            })}
-                                        </td>
-                                        <td className="action-cell">
-                                            <button
-                                                onClick={() => navigate(`/host/${session.id}`)}
-                                                className="btn btn-primary btn-small"
-                                            >
-                                                Launch
-                                            </button>
-                                            <button
-                                                onClick={() => navigate(`/analytics/${session.id}`)}
-                                                className="btn btn-secondary btn-icon btn-small"
-                                                title="Analytics"
-                                            >
-                                                📊
-                                            </button>
-                                            <button
-                                                onClick={() => handleDuplicate(session.id)}
-                                                className="btn btn-secondary btn-icon btn-small"
-                                                title="Duplicate"
-                                            >
-                                                📋
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(session.id)}
-                                                className="btn btn-danger btn-icon btn-small"
-                                                title="Delete"
-                                            >
-                                                🗑️
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </main>
-        </div>
+                                <div className="session-card-meta flex gap-md text-sm text-muted mb-lg">
+                                    <span className="flex items-center gap-xs">🏷️ {session.mode.replace('_', ' ')}</span>
+                                    <span className="flex items-center gap-xs">📅 {new Date(session.created_at).toLocaleDateString()}</span>
+                                </div>
+
+                                <div className="session-card-footer flex justify-between items-center mt-auto">
+                                    <div className="flex gap-xs">
+                                        <button
+                                            onClick={(e) => handleDuplicate(e, session.id)}
+                                            className="btn btn-secondary btn-icon btn-small"
+                                            title="Duplicate"
+                                        >
+                                            📋
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDelete(e, session.id)}
+                                            className="btn btn-secondary btn-icon btn-small hover:bg-error/10 hover:text-error"
+                                            title="Delete"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                    <button
+                                        className="btn btn-primary btn-small shadow-sm"
+                                        onClick={() => navigate(`/host/${session.id}`)}
+                                    >
+                                        Launch
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </div>
+            )}
+        </DashboardLayout>
     );
 };
 

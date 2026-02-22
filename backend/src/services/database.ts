@@ -597,12 +597,12 @@ export async function createUser(userData: Partial<User>): Promise<User> {
 
 // User retrieval functions restored and cleaned up
 export async function getUserByEmail(email: string): Promise<User | null> {
-  const result = await sql`SELECT * FROM users WHERE email = ${email.toLowerCase()}`;
+  const result = await sql`SELECT * FROM public.users WHERE email = ${email.toLowerCase()}`;
   return mapUser(result[0]);
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  const result = await sql`SELECT * FROM users WHERE id = ${id}`;
+  const result = await sql`SELECT * FROM public.users WHERE id = ${id}`;
   return mapUser(result[0]);
 }
 
@@ -657,9 +657,24 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
 
   if (fields.length === 0) return (await getUserById(id))!;
 
-  const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${fields.length + 1} RETURNING *`;
-  const result = await pool.query(query, [...values, id]);
-  return mapUser(result.rows[0]) as User;
+  if (fields.length === 0) return (await getUserById(id))!;
+
+  const queryText = `UPDATE public.users SET ${fields.join(', ')} WHERE id = $${fields.length + 1} RETURNING *`;
+
+  // Custom call to pool.query but with our error helper logic
+  try {
+    const result = await pool.query(queryText, [...values, id]);
+    return mapUser(result.rows[0]) as User;
+  } catch (error) {
+    const pathResult = await pool.query('SHOW search_path').catch(() => ({ rows: [{ search_path: 'unknown' }] }));
+    logger.error({
+      query: queryText,
+      values: [...values, id],
+      error,
+      search_path: pathResult.rows[0].search_path
+    }, '❌ updateUser Database Error');
+    throw error;
+  }
 }
 
 export async function createAuthToken(tokenData: Partial<AuthToken>): Promise<AuthToken> {
@@ -1007,7 +1022,7 @@ export default {
 
 export async function createRefreshToken(userId: string, tokenHash: string, expiresAt: Date) {
   const result = await sql`
-    INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+    INSERT INTO public.refresh_tokens (user_id, token_hash, expires_at)
     VALUES (${userId}, ${tokenHash}, ${expiresAt})
     RETURNING *
   `;
@@ -1021,8 +1036,8 @@ export async function createRefreshToken(userId: string, tokenHash: string, expi
 export async function getActiveRefreshTokens() {
   const result = await sql`
     SELECT rt.id, rt.token_hash, rt.user_id, rt.expires_at, rt.is_revoked, u.role as user_role
-    FROM refresh_tokens rt
-    JOIN users u ON rt.user_id = u.id
+    FROM public.refresh_tokens rt
+    JOIN public.users u ON rt.user_id = u.id
     WHERE rt.is_revoked = false AND rt.expires_at > NOW()
     ORDER BY rt.created_at DESC
     LIMIT 500

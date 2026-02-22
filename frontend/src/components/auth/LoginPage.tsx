@@ -44,55 +44,63 @@ const LoginPage: React.FC = () => {
     return (
         <AuthLayout title="Welcome Back" subtitle="Sign in to continue to MojoQuiz">
             {error && (
-                <div className="mb-6 text-sm text-red-600 bg-red-50 p-4 rounded-xl border border-red-100">
+                <div style={{
+                    marginBottom: '1.5rem',
+                    fontSize: '0.875rem',
+                    color: '#dc2626',
+                    backgroundColor: '#fef2f2',
+                    padding: '1rem',
+                    borderRadius: '0.75rem',
+                    border: '1px solid #fee2e2'
+                }}>
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-5">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <form onSubmit={handleLogin}>
+                <div className="auth-form-group">
+                    <label className="auth-label">
                         Email Address
                     </label>
                     <input
                         type="email"
                         required
-                        className="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 transition-shadow"
+                        className="auth-input"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@company.com"
                     />
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <div className="auth-form-group">
+                    <label className="auth-label">
                         Password
                     </label>
                     <input
                         type="password"
                         required
-                        className="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 transition-shadow"
+                        className="auth-input"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
                     />
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
                         <input
                             id="remember-me"
                             name="remember-me"
                             type="checkbox"
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                            style={{ height: '1rem', width: '1rem', color: '#4f46e5', borderRadius: '0.25rem' }}
                         />
-                        <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                        <label htmlFor="remember-me" style={{ marginLeft: '0.5rem', fontSize: '0.875rem', color: '#374151' }}>
                             Remember me
                         </label>
                     </div>
 
-                    <div className="text-sm pb-0.5">
-                        <Link to="/auth/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+                    <div style={{ fontSize: '0.875rem' }}>
+                        <Link to="/auth/forgot-password" style={{ fontWeight: '500', color: '#4f46e5', textDecoration: 'none' }}>
                             Forgot password?
                         </Link>
                     </div>
@@ -101,15 +109,15 @@ const LoginPage: React.FC = () => {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 mt-4"
+                    className="auth-submit-btn"
                 >
                     {loading ? "Signing in..." : "Sign In"}
                 </button>
             </form>
 
-            <div className="mt-8 text-sm text-center text-gray-600">
+            <div className="auth-footer">
                 Don't have an account?{" "}
-                <Link to="/auth/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+                <Link to="/auth/register" className="auth-link">
                     Create a free account
                 </Link>
             </div>

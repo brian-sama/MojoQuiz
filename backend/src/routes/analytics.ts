@@ -29,12 +29,12 @@ router.get('/:sessionId', authenticate, (async (req: Request, res: Response) => 
     try {
         const { sessionId } = req.params;
 
-        // Verify session belongs to user
+        // Verify session belongs to user or user is admin
         const session = await db.getSessionById(sessionId);
         if (!session) {
             return res.status(404).json({ error: 'Session not found' });
         }
-        if (session.user_id && session.user_id !== req.user!.id) {
+        if (session.user_id && session.user_id !== req.user!.id && req.user!.role !== 'admin') {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -89,9 +89,9 @@ router.get('/:sessionId/export', authenticate, (async (req: Request, res: Respon
         const { sessionId } = req.params;
         const { format = 'json' } = req.query;
 
-        // Verify session belongs to user
+        // Verify session belongs to user or user is admin
         const session = await db.getSessionById(sessionId);
-        if (!session || (session.user_id && session.user_id !== req.user!.id)) {
+        if (!session || (session.user_id && session.user_id !== req.user!.id && req.user!.role !== 'admin')) {
             return res.status(403).json({ error: 'Access denied' });
         }
 

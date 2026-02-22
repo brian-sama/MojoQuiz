@@ -5,13 +5,17 @@ import { aiService } from './aiService.js';
 import logger from '../utils/logger.js';
 import db from './database.js';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL;
 
-const connection = new Redis(REDIS_URL, {
+if (!REDIS_URL && process.env.NODE_ENV === 'development') {
+    logger.warn('REDIS_URL not found. Analytics worker disabled in development mode.');
+}
+
+const connection = REDIS_URL ? new Redis(REDIS_URL, {
     maxRetriesPerRequest: null,
-});
+}) : null;
 
-export const analyticsWorker = new Worker('analytics-queue', async (job: Job) => {
+export const analyticsWorker = connection ? new Worker('analytics-queue', async (job: Job) => {
     if (job.name === 'generate-report') {
         const { sessionId } = job.data;
         logger.info({ sessionId }, 'Processing session report generation...');
@@ -40,16 +44,18 @@ export const analyticsWorker = new Worker('analytics-queue', async (job: Job) =>
             throw error;
         }
     }
-}, { connection: connection as any });
+}, { connection: connection as any }) : null;
 
-analyticsWorker.on('completed', (job) => {
-    logger.info({ jobId: job.id, sessionId: job.data.sessionId }, 'Job completed successfully');
-});
+if (analyticsWorker) {
+    analyticsWorker.on('completed', (job) => {
+        logger.info({ jobId: job.id, sessionId: job.data.sessionId }, 'Job completed successfully');
+    });
 
-analyticsWorker.on('error', error => {
-    logger.error({ error }, 'Worker error:');
-});
+    analyticsWorker.on('error', error => {
+        logger.error({ error }, 'Worker error:');
+    });
 
-analyticsWorker.on('failed', (job, error) => {
-    logger.error({ error, jobId: job?.id }, 'Job failed:');
-});
+    analyticsWorker.on('failed', (job, error) => {
+        logger.error({ error, jobId: job?.id }, 'Job failed:');
+    });
+}

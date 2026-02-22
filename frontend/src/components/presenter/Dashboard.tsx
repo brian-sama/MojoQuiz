@@ -12,26 +12,25 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { api } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
-import AppLayout from '../../layouts/AppLayout';
+import DashboardLayout from '../../layouts/DashboardLayout';
 
-interface DashboardStats {
+type DashboardStats = {
     total_sessions: number;
     total_participants: number;
     avg_engagement_score: number;
     active_drafts: number;
-}
+};
 
-interface SessionItem {
+type SessionItem = {
     id: string;
     title: string;
-    mode: string;
-    status: string;
-    join_code: string;
+    status: 'active' | 'ended' | 'draft';
     created_at: string;
-    participant_count?: number;
-}
+    mode: string;
+};
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -87,63 +86,40 @@ function Dashboard() {
     };
 
     return (
-        <AppLayout>
+        <DashboardLayout>
             {/* Hero Section */}
-            <section className="dashboard-hero">
-                <h1>Welcome back, {user?.displayName?.split(' ')[0] || 'there'} 👋</h1>
-                <p>Create engaging sessions and track participation in real time.</p>
-                <div className="dashboard-actions">
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => navigate('/create')}
-                    >
-                        + Create New Session
-                    </button>
-                    <button
-                        className="btn btn-secondary"
-                        onClick={() => navigate('/templates')}
-                    >
-                        Browse Templates
-                    </button>
+            <header className="page-header mb-xl">
+                <div>
+                    <h1 className="text-3xl font-bold mb-xs">Welcome back, {user?.displayName?.split(' ')[0] || 'there'} 👋</h1>
+                    <p className="text-muted">Here's what's happening with your sessions.</p>
                 </div>
-            </section>
+            </header>
 
             {/* Stats Cards */}
-            <section className="stat-cards">
-                {loading ? (
-                    <>
-                        <div className="stat-card"><div className="skeleton skeleton-text-lg"></div><div className="skeleton skeleton-stat"></div></div>
-                        <div className="stat-card"><div className="skeleton skeleton-text-lg"></div><div className="skeleton skeleton-stat"></div></div>
-                        <div className="stat-card"><div className="skeleton skeleton-text-lg"></div><div className="skeleton skeleton-stat"></div></div>
-                        <div className="stat-card"><div className="skeleton skeleton-text-lg"></div><div className="skeleton skeleton-stat"></div></div>
-                    </>
-                ) : (
-                    <>
-                        <div className="stat-card">
-                            <div className="stat-card-label">Sessions Created</div>
-                            <div className="stat-card-value">{stats?.total_sessions || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-card-label">Participants Engaged</div>
-                            <div className="stat-card-value">{stats?.total_participants || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-card-label">Avg Engagement</div>
-                            <div className="stat-card-value">{stats?.avg_engagement_score || 0}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-card-label">Active Drafts</div>
-                            <div className="stat-card-value">{stats?.active_drafts || 0}</div>
-                        </div>
-                    </>
-                )}
+            <section className="stat-cards mb-xl">
+                <div className="stat-card">
+                    <div className="stat-card-label">Sessions Created</div>
+                    <div className="stat-card-value">{loading ? '...' : (stats?.total_sessions || 0)}</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-card-label">Participants Engaged</div>
+                    <div className="stat-card-value">{loading ? '...' : (stats?.total_participants || 0)}</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-card-label">Avg Engagement</div>
+                    <div className="stat-card-value">{loading ? '...' : (stats?.avg_engagement_score || 0)}%</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-card-label">Active Drafts</div>
+                    <div className="stat-card-value">{loading ? '...' : (stats?.active_drafts || 0)}</div>
+                </div>
             </section>
 
             {/* Error */}
             {error && (
-                <div className="card mb-md border-error">
+                <div className="card mb-md border-error p-md flex flex-col items-start gap-sm">
                     <p className="text-error">{error}</p>
-                    <button className="btn btn-secondary btn-small mt-sm" onClick={loadDashboard}>
+                    <button className="btn btn-secondary btn-small" onClick={loadDashboard}>
                         Retry
                     </button>
                 </div>
@@ -152,35 +128,30 @@ function Dashboard() {
             {/* Recent Sessions */}
             {!loading && sessions.length > 0 && (
                 <section>
-                    <div className="section-header">
-                        <h2>Recent Sessions</h2>
+                    <div className="section-header mb-md">
+                        <h2 className="text-xl font-bold">Recent Sessions</h2>
                         <button className="btn btn-secondary btn-small" onClick={() => navigate('/library')}>
                             View All
                         </button>
                     </div>
                     <div className="session-grid">
                         {sessions.map((session) => (
-                            <div
+                            <motion.div
                                 key={session.id}
                                 className="session-card"
+                                whileHover={{ y: -4, boxShadow: 'var(--shadow-lg)' }}
                                 onClick={() => navigate(`/host/${session.id}`)}
                             >
                                 <div className="session-card-header">
-                                    <div className="session-card-title">{session.title}</div>
+                                    <h3 className="session-card-title">{session.title}</h3>
                                     <span className={getStatusBadgeClass(session.status)}>
                                         {getStatusLabel(session.status)}
                                     </span>
                                 </div>
                                 <div className="session-card-meta">
                                     <span>{formatDate(session.created_at)}</span>
-                                    <span>•</span>
-                                    <span>{session.mode}</span>
-                                    {session.join_code && (
-                                        <>
-                                            <span>•</span>
-                                            <span className="text-bold font-mono">{session.join_code}</span>
-                                        </>
-                                    )}
+                                    <span className="dot">•</span>
+                                    <span className="capitalize">{session.mode.replace('_', ' ')}</span>
                                 </div>
                                 <div className="session-card-actions" onClick={(e) => e.stopPropagation()}>
                                     <button
@@ -196,7 +167,7 @@ function Dashboard() {
                                         Analytics
                                     </button>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
                     </div>
                 </section>
@@ -204,21 +175,18 @@ function Dashboard() {
 
             {/* Empty State */}
             {!loading && sessions.length === 0 && !error && (
-                <div className="empty-state">
-                    <div className="empty-state-icon">📋</div>
-                    <h3>No sessions yet</h3>
-                    <p>Create your first session to start engaging your audience with live polls, quizzes, and word clouds.</p>
-                    <div className="dashboard-actions justify-center">
-                        <button className="btn btn-primary" onClick={() => navigate('/create')}>
-                            Create Your First Session
-                        </button>
-                        <button className="btn btn-secondary" onClick={() => navigate('/templates')}>
-                            Start from Template
-                        </button>
-                    </div>
+                <div className="empty-state card py-2xl text-center">
+                    <div className="empty-state-icon text-5xl mb-md">📋</div>
+                    <h3 className="text-2xl font-bold mb-xs">No sessions yet</h3>
+                    <p className="text-muted mb-lg mx-auto" style={{ maxWidth: '400px' }}>
+                        Create your first session to start engaging your audience with live polls, quizzes, and word clouds.
+                    </p>
+                    <button className="btn btn-primary" onClick={() => navigate('/create')}>
+                        Create Your First Session
+                    </button>
                 </div>
             )}
-        </AppLayout>
+        </DashboardLayout>
     );
 }
 

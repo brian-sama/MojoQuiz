@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SEOHead from '../../components/seo/SEOHead';
+import BrandLogo from '../../components/common/BrandLogo';
 import '../../layouts/AppLayout.css'; // Uses variables and utility classes
 
 const LandingPage: React.FC = () => {
@@ -28,7 +29,9 @@ const LandingPage: React.FC = () => {
             {/* Header / Nav */}
             <nav className="app-nav">
                 <div className="app-nav-inner flex justify-between items-center">
-                    <div className="text-xl font-bold text-primary">MojoQuiz</div>
+                    <Link to="/" className="landing-brand-link" aria-label="MojoQuiz home">
+                        <BrandLogo variant="full" className="landing-brand-logo" />
+                    </Link>
                     <div className="flex gap-md">
                         <Link to="/auth/login" className="btn btn-secondary">Login</Link>
                         <Link to="/auth/register" className="btn btn-primary">Sign Up</Link>
@@ -50,7 +53,7 @@ const LandingPage: React.FC = () => {
                         </p>
 
                         <div className="card p-xl shadow-lg mx-auto max-w-sm">
-                            <h1 className="text-xl-bold mb-md">MojoQuiz</h1>
+                            <BrandLogo variant="full" className="landing-join-logo" />
                             <form onSubmit={handleJoin} className="flex gap-sm">
                                 <input
                                     type="text"
@@ -125,6 +128,9 @@ const LandingPage: React.FC = () => {
                 .text-6xl { font-size: 3.5rem; }
                 .font-black { font-weight: 900; }
                 .max-w-xl { max-width: 1140px; margin-left: auto; margin-right: auto; }
+                .landing-brand-link { display: inline-flex; align-items: center; }
+                .landing-brand-logo { display: block; height: 42px; width: auto; }
+                .landing-join-logo { display: block; height: 34px; width: auto; margin: 0 auto 1rem; }
             `}</style>
         </div>
     );
