@@ -27,7 +27,7 @@ const RegisterPage: React.FC = () => {
                 password,
                 displayName
             });
-            login(response.token, response.user);
+            login(response.accessToken || response.token, response.user);
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Registration failed. Please try again.');

@@ -1,9 +1,13 @@
 import { Request, Response, Router } from 'express';
 import { authorize } from '../middleware/rbac.js';
+import { authenticate } from '../middleware/auth.js';
 import db from '../services/database.js';
 import logger from '../utils/logger.js';
 
 const router: Router = Router();
+
+// All admin endpoints require authentication first.
+router.use(authenticate as any);
 
 /**
  * GET /api/admin/users

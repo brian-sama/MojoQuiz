@@ -57,7 +57,7 @@ const LoginPage: React.FC = () => {
 
         try {
             const response = await api.post('/auth/login', { email, password });
-            login(response.token, response.user);
+            login(response.accessToken || response.token, response.user);
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Invalid password. Please try again.');
@@ -79,7 +79,7 @@ const LoginPage: React.FC = () => {
                 password,
                 displayName
             });
-            login(response.token, response.user);
+            login(response.accessToken || response.token, response.user);
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Failed to complete registration.');

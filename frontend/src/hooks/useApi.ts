@@ -8,6 +8,20 @@ import { useState, useCallback } from 'react';
 // API base URL - change this for production
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+function clearAuthAndRedirect() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = '/auth/login';
+}
+
+function parseJsonSafely(text: string) {
+    try {
+        return text ? JSON.parse(text) : {};
+    } catch {
+        return {};
+    }
+}
+
 export const api = {
     baseUrl: API_BASE,
 
@@ -34,32 +48,44 @@ export const api = {
 
         // Handle empty responses
         const text = await response.text();
-        const data = text ? JSON.parse(text) : {};
+        const data = parseJsonSafely(text);
 
         if (!response.ok) {
-            if (response.status === 401) {
+            const normalizedEndpoint = endpoint.replace(/^\//, '');
+            const isRefreshRequest = normalizedEndpoint === 'auth/refresh';
+
+            if (response.status === 401 && !isRefreshRequest) {
                 // Attempt silent token refresh
                 try {
-                    const refreshRes = await fetch(`${this.baseUrl}/auth/refresh`, {
+                    const refreshSeparator = this.baseUrl.endsWith('/') ? '' : '/';
+                    const refreshUrl = this.baseUrl
+                        ? `${this.baseUrl}${refreshSeparator}auth/refresh`
+                        : '/api/auth/refresh';
+
+                    const refreshRes = await fetch(refreshUrl, {
                         method: 'POST',
                         credentials: 'include',
                     });
+
                     if (refreshRes.ok) {
                         const refreshData = await refreshRes.json();
                         localStorage.setItem('auth_token', refreshData.accessToken);
+
                         // Retry original request with new token
                         headers['Authorization'] = `Bearer ${refreshData.accessToken}`;
                         const retryRes = await fetch(url, { ...options, headers, credentials: 'include' });
                         const retryText = await retryRes.text();
-                        return retryText ? JSON.parse(retryText) : {};
+                        return parseJsonSafely(retryText);
                     }
+
+                    clearAuthAndRedirect();
+                    throw new Error('Session expired. Please log in again.');
                 } catch {
-                    // Refresh failed — redirect to login
-                    localStorage.removeItem('auth_token');
-                    localStorage.removeItem('auth_user');
-                    window.location.href = '/auth/login';
+                    clearAuthAndRedirect();
+                    throw new Error('Session expired. Please log in again.');
                 }
             }
+
             throw new Error(data.error || 'Request failed');
         }
 
@@ -107,7 +133,7 @@ export const api = {
 
     async getSessionDetails(sessionId: string) {
         // In the new backend, we use joinCode or sessionId for info
-        // Most session info is fetched via Socket.IO join events now, 
+        // Most session info is fetched via Socket.IO join events now,
         // but we'll map this to the session info endpoint
         return this.request(`sessions/${sessionId}`);
     },

@@ -83,6 +83,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
         res.json({
             accessToken,
+            token: accessToken,
             user: {
                 id: user.id,
                 email: user.email,
@@ -132,6 +133,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
         res.json({
             accessToken,
+            token: accessToken,
             user: {
                 id: user.id,
                 email: user.email,
@@ -162,7 +164,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        res.json({ accessToken });
+        res.json({ accessToken, token: accessToken });
     } catch (error) {
         logger.error({ error }, 'Refresh token error');
         res.clearCookie(REFRESH_TOKEN_COOKIE_NAME);
