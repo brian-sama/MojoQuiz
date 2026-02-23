@@ -15,7 +15,9 @@ const CreateSessionSchema = z.object({
     title: z.string().min(3).max(100),
     presenterId: z.string().optional(),
     user_id: z.string().optional(),
-    mode: z.enum(['mixed', 'quiz', 'poll']).default('mixed'),
+    mode: z.enum(['mixed', 'quiz', 'engagement', 'poll'])
+        .default('mixed')
+        .transform(mode => mode === 'poll' ? 'engagement' : mode),
 }).refine(data => data.presenterId || data.user_id, {
     message: "Either presenterId or user_id must be provided",
     path: ["presenterId"]

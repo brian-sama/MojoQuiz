@@ -197,9 +197,9 @@ function CreateSession() {
 
                                 <div className="flex flex-col gap-md">
                                     <label className="form-label text-sm font-bold">Add a question</label>
-                                    <div className="flex gap-sm">
+                                    <div className="create-question-row">
                                         <select
-                                            className="input w-32 flex-shrink-0 text-sm"
+                                            className="input create-question-type text-sm"
                                             value={newQuestionType}
                                             onChange={(e) => setNewQuestionType(e.target.value)}
                                             title="Select Question Type"
@@ -213,13 +213,13 @@ function CreateSession() {
                                         </select>
                                         <input
                                             type="text"
-                                            className="input flex-1"
+                                            className="input create-question-input"
                                             placeholder="Enter your question text..."
                                             value={newQuestion}
                                             onChange={(e) => setNewQuestion(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && addQuestion()}
                                         />
-                                        <button className="btn btn-secondary btn-icon" onClick={addQuestion} disabled={!newQuestion.trim()}>
+                                        <button className="btn btn-secondary btn-icon create-question-add" onClick={addQuestion} disabled={!newQuestion.trim()}>
                                             ➕
                                         </button>
                                     </div>
