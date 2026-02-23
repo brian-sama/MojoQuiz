@@ -543,7 +543,7 @@
 
 .flex-col {
     display: flex;
-    flexDirection: column;
+    flex-direction: column;
 }
 
 .items-start {

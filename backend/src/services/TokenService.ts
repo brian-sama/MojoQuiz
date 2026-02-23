@@ -1,8 +1,15 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 import db from './database.js';
 import logger from '../utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const JWT_ACCESS_SECRET = (process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET) as string;
 const JWT_REFRESH_SECRET = (process.env.JWT_REFRESH_SECRET || JWT_ACCESS_SECRET) as string;
