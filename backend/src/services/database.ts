@@ -146,7 +146,7 @@ export async function duplicateSession(sessionId: string, newTitle?: string): Pr
 export async function getSessionByCode(joinCode: string): Promise<Session | null> {
   const result = await sql`
     SELECT * FROM sessions 
-    WHERE join_code = ${joinCode} AND status = 'active'
+    WHERE join_code = ${joinCode} AND status IN ('active', 'live')
   `;
   return result[0] as Session || null;
 }
@@ -175,6 +175,57 @@ export async function updateSessionStatus(
   }
 }
 
+export async function updateSession(
+  sessionId: string,
+  updates: Partial<Pick<Session, 'status' | 'current_question_id' | 'title' | 'mode' | 'ended_at'>>
+): Promise<Session> {
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (updates.status !== undefined) {
+    fields.push(`status = $${fields.length + 1}`);
+    values.push(updates.status);
+  }
+  if (updates.current_question_id !== undefined) {
+    fields.push(`current_question_id = $${fields.length + 1}`);
+    values.push(updates.current_question_id);
+  }
+  if (updates.title !== undefined) {
+    fields.push(`title = $${fields.length + 1}`);
+    values.push(updates.title);
+  }
+  if (updates.mode !== undefined) {
+    fields.push(`mode = $${fields.length + 1}`);
+    values.push(updates.mode);
+  }
+  if (updates.ended_at !== undefined) {
+    fields.push(`ended_at = $${fields.length + 1}`);
+    values.push(updates.ended_at);
+  }
+
+  if (fields.length === 0) {
+    const existing = await getSessionById(sessionId);
+    if (!existing) {
+      throw new Error('Session not found');
+    }
+    return existing;
+  }
+
+  const queryText = `
+    UPDATE sessions
+    SET ${fields.join(', ')}
+    WHERE id = $${fields.length + 1}
+    RETURNING *
+  `;
+
+  const result = await pool.query(queryText, [...values, sessionId]);
+  if (result.rows.length === 0) {
+    throw new Error('Session not found');
+  }
+
+  return result.rows[0] as Session;
+}
+
 export async function setCurrentQuestion(
   sessionId: string,
   questionId: string | null
@@ -190,7 +241,7 @@ export async function expireOldSessions(): Promise<number> {
   const result = await sql`
     UPDATE sessions 
     SET status = 'ended', ended_at = NOW()
-    WHERE status = 'active' AND expires_at < NOW()
+    WHERE status IN ('active', 'live') AND expires_at < NOW()
     RETURNING id
   `;
   return result.length;
@@ -923,6 +974,7 @@ export default {
   createSession,
   getSessionByCode,
   getSessionById,
+  updateSession,
   updateSessionStatus,
   setCurrentQuestion,
   expireOldSessions,
@@ -1077,7 +1129,7 @@ export async function getDashboardStats(userId: string) {
   const stats = await sql`
     SELECT
       COUNT(DISTINCT s.id)::int AS total_sessions,
-      COALESCE(SUM(CASE WHEN s.status = 'active' THEN 1 ELSE 0 END), 0)::int AS active_drafts,
+      COALESCE(SUM(CASE WHEN s.status IN ('active', 'live') THEN 1 ELSE 0 END), 0)::int AS active_drafts,
       COALESCE((
         SELECT COUNT(DISTINCT p.id)::int
         FROM participants p

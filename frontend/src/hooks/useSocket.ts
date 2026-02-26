@@ -29,10 +29,12 @@ export function useSocket(options: UseSocketOptions = {}) {
     useEffect(() => {
         if (!autoConnect) return;
 
+        const authToken = localStorage.getItem('auth_token');
         const socket = io(SOCKET_URL, {
             withCredentials: true,
             transports: ['websocket', 'polling'],
-            path: '/socket.io/'
+            path: '/socket.io/',
+            auth: authToken ? { token: authToken } : undefined,
         });
 
         socketRef.current = socket;
@@ -50,7 +52,11 @@ export function useSocket(options: UseSocketOptions = {}) {
 
         socket.on('connect_error', (err) => {
             console.error('Socket connection error:', err);
-            setError('Connection failed. Please try again.');
+            if (err.message === 'AUTH_ERROR') {
+                setError('Socket authentication failed. Please log in again.');
+            } else {
+                setError('Connection failed. Please try again.');
+            }
             setIsConnected(false);
         });
 

@@ -27,7 +27,7 @@ type DashboardStats = {
 type SessionItem = {
     id: string;
     title: string;
-    status: 'active' | 'ended' | 'draft';
+    status: 'active' | 'live' | 'ended' | 'draft';
     created_at: string;
     mode: string;
 };
@@ -64,6 +64,7 @@ function Dashboard() {
     const getStatusBadgeClass = (status: string) => {
         switch (status) {
             case 'active': return 'status-badge status-badge-active';
+            case 'live': return 'status-badge status-badge-active';
             case 'ended': return 'status-badge status-badge-ended';
             default: return 'status-badge status-badge-draft';
         }
@@ -72,6 +73,7 @@ function Dashboard() {
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'active': return 'Live';
+            case 'live': return 'Live';
             case 'ended': return 'Completed';
             default: return 'Draft';
         }

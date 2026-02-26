@@ -9,7 +9,7 @@ export interface Session {
     title: string;
     presenter_id: string;
     mode: 'engagement' | 'quiz' | 'mixed';
-    status: 'active' | 'paused' | 'ended';
+    status: 'active' | 'live' | 'paused' | 'ended';
     settings: SessionSettings;
     current_question_id: string | null;
     created_at: Date;

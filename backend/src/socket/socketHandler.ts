@@ -14,6 +14,7 @@ import {
 import { shouldFilterWord, containsProfanity } from '../utils/profanityFilter.js';
 import { ErrorCodes } from '../types/index.js';
 import logger from '../utils/logger.js';
+import { SocketEvents } from './events.js';
 
 interface SocketData {
     sessionId: string;
@@ -21,6 +22,7 @@ interface SocketData {
     cookieId: string;
     nickname?: string;
     isPresenter: boolean;
+    presenterUserId?: string;
 }
 
 /**
@@ -63,7 +65,7 @@ export function initializeSocketHandlers(io: Server): void {
                     return;
                 }
 
-                if (session.status !== 'active') {
+                if (session.status !== 'active' && session.status !== 'live') {
                     socket.emit('error', {
                         code: ErrorCodes.SESSION_ENDED,
                         message: 'Session has ended',
@@ -124,7 +126,7 @@ export function initializeSocketHandlers(io: Server): void {
                 });
 
                 // Broadcast to room that someone joined
-                socket.to(`session:${session.id}`).emit('participant_joined', {
+                socket.to(`session:${session.id}`).emit(SocketEvents.PARTICIPANT_JOINED, {
                     participant_id: participant.id,
                     nickname: cleanNickname,
                     participant_count: participantCount,
@@ -144,12 +146,11 @@ export function initializeSocketHandlers(io: Server): void {
         /**
          * Presenter joins a session
          */
-        socket.on('presenter_join', async (payload: {
+        socket.on(SocketEvents.PRESENTER_JOIN, async (payload: {
             session_id: string;
-            presenter_id: string;
         }) => {
             try {
-                const { session_id, presenter_id } = payload;
+                const { session_id } = payload;
 
                 const session = await db.getSessionById(session_id);
                 if (!session) {
@@ -160,8 +161,8 @@ export function initializeSocketHandlers(io: Server): void {
                     return;
                 }
 
-                // Verify presenter (simple check - in production use proper auth)
-                if (session.presenter_id !== presenter_id) {
+                const userId = typeof socket.data.userId === 'string' ? socket.data.userId : '';
+                if (!userId || (userId !== session.presenter_id && userId !== session.user_id)) {
                     socket.emit('error', {
                         code: 'UNAUTHORIZED',
                         message: 'Not authorized as presenter',
@@ -171,6 +172,7 @@ export function initializeSocketHandlers(io: Server): void {
 
                 socketData.sessionId = session_id;
                 socketData.isPresenter = true;
+                socketData.presenterUserId = userId;
 
                 // Join session room and presenter room
                 socket.join(`session:${session_id}`);
@@ -587,7 +589,7 @@ export function initializeSocketHandlers(io: Server): void {
 
                 await db.updateSessionStatus(socketData.sessionId, 'ended');
 
-                io.to(`session:${socketData.sessionId}`).emit('session_ended', {
+                io.to(`session:${socketData.sessionId}`).emit(SocketEvents.SESSION_ENDED, {
                     message: 'The session has ended',
                 });
 

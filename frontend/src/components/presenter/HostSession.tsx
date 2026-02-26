@@ -10,6 +10,7 @@ import useSocket from '../../hooks/useSocket';
 import { api } from '../../hooks/useApi';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Question, PollResults, WordCloudWord, LeaderboardEntry, QuestionOption } from '../../types';
+import { SOCKET_EVENTS } from '../../constants/socketEvents';
 
 interface Session {
     id: string;
@@ -34,6 +35,7 @@ function HostSession() {
     const [loading, setLoading] = useState(true);
     const [showQRCode, setShowQRCode] = useState(false);
     const [isPresentationMode, setIsPresentationMode] = useState(false);
+    const [isStarting, setIsStarting] = useState(false);
 
     // Question builder state
     const [showBuilder, setShowBuilder] = useState(false);
@@ -114,72 +116,84 @@ function HostSession() {
         if (!sessionId || !isConnected) return;
 
         // Join as presenter
-        emit('presenter_join', { session_id: sessionId, presenter_id: 'brian-presenter' });
+        emit(SOCKET_EVENTS.PRESENTER_JOIN, { session_id: sessionId });
 
-        on('presenter_joined', (data: any) => {
+        on(SOCKET_EVENTS.PRESENTER_JOINED, (data: any) => {
             setParticipantCount(data.participant_count);
         });
 
-        on('participant_joined', (data: any) => {
+        on(SOCKET_EVENTS.PARTICIPANT_JOINED, (data: any) => {
             setParticipantCount(data.participant_count);
         });
 
-        on('participant_left', (data: any) => {
+        on(SOCKET_EVENTS.PARTICIPANT_LEFT, (data: any) => {
             setParticipantCount(data.participant_count);
         });
 
-        on('results_updated', (data: any) => {
+        on(SOCKET_EVENTS.RESULTS_UPDATED, (data: any) => {
             setResponseCount(data.response_count);
             if (activeQuestion && activeQuestion.id === data.question_id) {
                 setResults(data.results);
             }
         });
 
-        on('word_cloud_updated', (data: any) => {
+        on(SOCKET_EVENTS.WORD_CLOUD_UPDATED, (data: any) => {
             setResponseCount(data.response_count);
             if (activeQuestion && activeQuestion.id === data.question_id) {
                 setResults(data.words.map((w: any) => ({ word: w.word, weight: w.count })));
             }
         });
 
-        on('text_response_received', (data: any) => {
+        on(SOCKET_EVENTS.TEXT_RESPONSE_RECEIVED, (data: any) => {
             setResponseCount(data.response_count);
         });
 
-        on('leaderboard_updated', (data: any) => {
+        on(SOCKET_EVENTS.LEADERBOARD_UPDATED, (data: any) => {
             setLeaderboard(data.leaderboard);
         });
 
-        on('question_activated', (data: any) => {
+        on(SOCKET_EVENTS.QUESTION_ACTIVATED, (data: any) => {
             setResponseCount(data.response_count || 0);
             setResults(null);
             setActiveQuestion(transformQuestion(data.question));
         });
 
-        on('question_locked', (data: any) => {
+        on(SOCKET_EVENTS.QUESTION_LOCKED, (data: any) => {
             if (activeQuestion && activeQuestion.id === data.question_id) {
                 setActiveQuestion(prev => prev ? { ...prev, is_locked: data.is_locked } : null);
             }
         });
 
-        on('results_revealed', (data: any) => {
+        on(SOCKET_EVENTS.RESULTS_REVEALED, (data: any) => {
             if (activeQuestion && activeQuestion.id === data.question_id) {
                 setActiveQuestion(prev => prev ? { ...prev, is_results_visible: true } : null);
                 setResults(data.results);
             }
         });
 
+        on(SOCKET_EVENTS.SESSION_STARTED, () => {
+            setSession(prev => (prev ? { ...prev, status: 'live' } : prev));
+        });
+
+        on(SOCKET_EVENTS.QUESTION_ADDED, (data: any) => {
+            if (data?.question) {
+                setQuestions(prev => [...prev, transformQuestion(data.question)]);
+            }
+        });
+
         return () => {
-            off('presenter_joined');
-            off('participant_joined');
-            off('participant_left');
-            off('results_updated');
-            off('word_cloud_updated');
-            off('text_response_received');
-            off('leaderboard_updated');
-            off('question_activated');
-            off('question_locked');
-            off('results_revealed');
+            off(SOCKET_EVENTS.PRESENTER_JOINED);
+            off(SOCKET_EVENTS.PARTICIPANT_JOINED);
+            off(SOCKET_EVENTS.PARTICIPANT_LEFT);
+            off(SOCKET_EVENTS.RESULTS_UPDATED);
+            off(SOCKET_EVENTS.WORD_CLOUD_UPDATED);
+            off(SOCKET_EVENTS.TEXT_RESPONSE_RECEIVED);
+            off(SOCKET_EVENTS.LEADERBOARD_UPDATED);
+            off(SOCKET_EVENTS.QUESTION_ACTIVATED);
+            off(SOCKET_EVENTS.QUESTION_LOCKED);
+            off(SOCKET_EVENTS.RESULTS_REVEALED);
+            off(SOCKET_EVENTS.SESSION_STARTED);
+            off(SOCKET_EVENTS.QUESTION_ADDED);
         };
     }, [sessionId, isConnected, on, off, emit, activeQuestion]);
 
@@ -279,10 +293,23 @@ function HostSession() {
         emit('show_results', { question_id: activeQuestion.id });
     }, [activeQuestion, emit]);
 
+    const startSession = useCallback(async () => {
+        if (!sessionId || session?.status === 'live') return;
+        setIsStarting(true);
+        try {
+            await api.startSession(sessionId);
+            setSession(prev => (prev ? { ...prev, status: 'live' } : prev));
+        } catch (err) {
+            console.error('Failed to start session:', err);
+        } finally {
+            setIsStarting(false);
+        }
+    }, [sessionId, session?.status]);
+
     // End session
     const endSession = useCallback(() => {
         if (window.confirm('Are you sure you want to end this session?')) {
-            emit('end_session');
+            emit(SOCKET_EVENTS.END_SESSION);
             navigate('/dashboard');
         }
     }, [emit, navigate]);
@@ -323,12 +350,20 @@ function HostSession() {
                     </div>
                 </div>
                 <div className="host-actions">
-                    <button className="btn btn-secondary" onClick={() => setIsPresentationMode(!isPresentationMode)}>
+                    <button
+                        className={`btn ${isPresentationMode ? 'btn-primary active' : 'btn-secondary'}`}
+                        onClick={() => setIsPresentationMode(!isPresentationMode)}
+                    >
                         {isPresentationMode ? 'Exit Presentation' : 'Presentation Mode'}
                     </button>
                     {session?.mode === 'quiz' && (
                         <button className="btn btn-secondary" onClick={() => setShowLeaderboard(!showLeaderboard)}>
                             {showLeaderboard ? 'Back to Question' : 'Leaderboard'}
+                        </button>
+                    )}
+                    {session?.status !== 'live' && session?.status !== 'ended' && (
+                        <button className="btn btn-primary" onClick={startSession} disabled={isStarting}>
+                            {isStarting ? 'Starting...' : 'Start Session'}
                         </button>
                     )}
                     {!isPresentationMode && (
@@ -467,12 +502,6 @@ function HostSession() {
                             </div>
                         )}
 
-                        {/* Session Actions */}
-                        <div className="mt-auto">
-                            <button className="btn btn-danger btn-block" onClick={endSession}>
-                                End Session
-                            </button>
-                        </div>
                     </aside>
                 )}
             </div>

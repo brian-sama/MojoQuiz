@@ -14,6 +14,7 @@ import initializeSocketHandlers from './socket/socketHandler.js';
 import { expireOldSessions } from './services/database.js';
 import logger from './utils/logger.js';
 import './services/WorkerService.js'; // Initialize the worker
+import socketService from './services/socketService.js';
 
 dotenv.config();
 
@@ -64,21 +65,24 @@ import { TokenService } from './services/TokenService.js';
 // Socket JWT Authentication for presenter connections
 io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
-    if (token) {
-        try {
-            const decoded = TokenService.verifyAccessToken(token);
-            (socket as any).userId = decoded.userId;
-            (socket as any).userRole = decoded.role;
-        } catch {
-            // Token invalid — still allow connection (participant may not have token)
-            logger.warn({ socketId: socket.id }, 'Socket auth: invalid token provided');
-        }
+    if (!token) {
+        return next();
     }
-    next();
+
+    try {
+        const decoded = TokenService.verifyAccessToken(token);
+        socket.data.userId = decoded.userId;
+        socket.data.userRole = decoded.role;
+        return next();
+    } catch {
+        logger.warn({ socketId: socket.id }, 'Socket auth: invalid token provided');
+        return next(new Error('AUTH_ERROR'));
+    }
 });
 
 // Initialize socket handlers with throttle
 io.use(throttleEvents);
+socketService.setIo(io);
 initializeSocketHandlers(io);
 
 // ============================================
@@ -180,3 +184,4 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export { io, server };
+

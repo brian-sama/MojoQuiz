@@ -151,6 +151,12 @@ export const api = {
         });
     },
 
+    async startSession(sessionId: string) {
+        return this.request(`sessions/${sessionId}/start`, {
+            method: 'POST',
+        });
+    },
+
     // Questions
     async getQuestions(sessionId: string) {
         return this.request(`sessions/${sessionId}/questions`);

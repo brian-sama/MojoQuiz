@@ -555,6 +555,11 @@ p,
   transform: none !important;
 }
 
+.btn.active {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+  transform: scale(1.02);
+}
+
 /* Inputs */
 .input {
   width: 100%;
@@ -1025,7 +1030,7 @@ p,
 }
 
 .btn-danger {
-  color: var(--color-error);
+  color: #fff !important;
 }
 
 .host-content {

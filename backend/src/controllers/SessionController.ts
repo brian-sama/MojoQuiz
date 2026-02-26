@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import db from '../services/database.js';
 import { ExportService } from '../services/ExportService.js';
+import socketService from '../services/socketService.js';
+import { SocketEvents } from '../socket/events.js';
 import {
     generateJoinCode,
     getOrCreateParticipantCookie,
@@ -183,7 +185,7 @@ export class SessionController {
                 return res.status(404).json({ error: 'Session not found or ended' });
             }
 
-            if (session.status !== 'active') {
+            if (session.status !== 'active' && session.status !== 'live') {
                 return res.status(400).json({ error: 'Session is not active' });
             }
 
@@ -209,12 +211,70 @@ export class SessionController {
     }
 
     /**
+     * Start a session (set status live + broadcast)
+     */
+    static async start(req: Request, res: Response) {
+        try {
+            const { sessionId } = req.params;
+            const session = await db.getSessionById(sessionId);
+
+            if (!session) {
+                return res.status(404).json({ ok: false, error: 'Session not found' });
+            }
+
+            // Presenter authorization
+            const userId = req.user?.id;
+            const isAuthorizedPresenter =
+                !!userId && (userId === session.presenter_id || userId === session.user_id);
+
+            if (!isAuthorizedPresenter) {
+                return res.status(403).json({ ok: false, error: 'Not authorized' });
+            }
+
+            if (session.status === 'ended') {
+                return res.status(400).json({ ok: false, error: 'Session has already ended' });
+            }
+
+            const updated = await db.updateSession(sessionId, { status: 'live' });
+
+            socketService.emitToSession(sessionId, SocketEvents.SESSION_STARTED, {
+                sessionId,
+                status: updated.status,
+            });
+
+            return res.status(200).json({ ok: true, session: updated });
+        } catch (error) {
+            console.error('Error starting session:', error);
+            return res.status(500).json({ ok: false, error: 'Failed to start session' });
+        }
+    }
+
+    /**
      * End a session
      */
     static async end(req: Request, res: Response) {
         try {
             const { sessionId } = req.params;
+
+            const session = await db.getSessionById(sessionId);
+            if (!session) {
+                return res.status(404).json({ success: false, error: 'Session not found' });
+            }
+
+            const userId = req.user?.id;
+            const isAuthorizedPresenter =
+                !!userId && (userId === session.presenter_id || userId === session.user_id);
+
+            if (!isAuthorizedPresenter) {
+                return res.status(403).json({ success: false, error: 'Not authorized' });
+            }
+
             await db.updateSessionStatus(sessionId, 'ended');
+
+            socketService.emitToSession(sessionId, SocketEvents.SESSION_ENDED, {
+                message: 'The session has ended',
+            });
+
             res.json({ success: true });
         } catch (error) {
             console.error('Error ending session:', error);

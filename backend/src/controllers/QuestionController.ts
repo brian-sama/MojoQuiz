@@ -3,6 +3,8 @@ import { z } from 'zod';
 import db from '../services/database.js';
 import { aiService } from '../services/aiService.js';
 import { sanitizeInput } from '../utils/helpers.js';
+import socketService from '../services/socketService.js';
+import { SocketEvents } from '../socket/events.js';
 
 // Validation Schemas
 const CreateQuestionSchema = z.object({
@@ -51,6 +53,10 @@ export class QuestionController {
                 correct_answer: correctAnswer || null,
                 time_limit: timeLimit || null,
                 display_order: displayOrder,
+            });
+
+            socketService.emitToSession(sessionId, SocketEvents.QUESTION_ADDED, {
+                question,
             });
 
             res.status(201).json({ question });

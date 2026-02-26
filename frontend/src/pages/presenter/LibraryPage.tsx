@@ -150,8 +150,8 @@ const LibraryPage: React.FC<{ defaultTab?: 'my-sessions' | 'templates' }> = ({ d
                                     <h3 className="session-card-title font-bold text-lg group-hover:text-primary transition-colors">
                                         {session.title}
                                     </h3>
-                                    <span className={`status-badge status-badge-${session.status === 'active' ? 'active' : 'draft'}`}>
-                                        {session.status === 'active' ? 'Live' : 'Draft'}
+                                    <span className={`status-badge status-badge-${session.status === 'active' || session.status === 'live' ? 'active' : 'draft'}`}>
+                                        {session.status === 'active' || session.status === 'live' ? 'Live' : 'Draft'}
                                     </span>
                                 </div>
 

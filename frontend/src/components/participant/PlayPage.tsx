@@ -9,6 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import useSocket from '../../hooks/useSocket';
 import { api } from '../../hooks/useApi';
 import type { Question, ResponseSubmittedEvent } from '../../types';
+import { SOCKET_EVENTS } from '../../constants/socketEvents';
 import PollQuestion from './PollQuestion';
 import WordCloudInput from './WordCloudInput';
 import ScaleQuestion from './ScaleQuestion';
@@ -85,7 +86,7 @@ function PlayPage() {
         });
 
         // Listen for confirmation
-        on('session_joined', (data: any) => {
+        on(SOCKET_EVENTS.SESSION_JOINED, (data: any) => {
             setParticipantCount(data.participant_count);
             if (data.active_question) {
                 setActiveQuestion(transformQuestion(data.active_question));
@@ -94,34 +95,34 @@ function PlayPage() {
         });
 
         // Bind to events
-        on('question_activated', (data: any) => {
+        on(SOCKET_EVENTS.QUESTION_ACTIVATED, (data: any) => {
             setActiveQuestion(transformQuestion(data.question));
             setHasResponded(false);
             setResponseResult(null);
             setWaiting(false);
         });
 
-        on('participant_joined', (data: any) => {
+        on(SOCKET_EVENTS.PARTICIPANT_JOINED, (data: any) => {
             setParticipantCount(data.participant_count);
         });
 
-        on('participant_left', (data: any) => {
+        on(SOCKET_EVENTS.PARTICIPANT_LEFT, (data: any) => {
             setParticipantCount(data.participant_count);
         });
 
-        on('participant_removed', (data: any) => {
+        on(SOCKET_EVENTS.PARTICIPANT_REMOVED, (data: any) => {
             if (data.participant_id === participantId) {
                 setError('You have been removed from the session');
             }
         });
 
-        on('question_locked', (data: any) => {
+        on(SOCKET_EVENTS.QUESTION_LOCKED, (data: any) => {
             if (activeQuestion && activeQuestion.id === data.question_id) {
                 setActiveQuestion(prev => prev ? { ...prev, is_locked: data.is_locked } : null);
             }
         });
 
-        on('results_revealed', (data: any) => {
+        on(SOCKET_EVENTS.RESULTS_REVEALED, (data: any) => {
             if (activeQuestion && activeQuestion.id === data.question_id) {
                 setActiveQuestion(prev => prev ? { ...prev, is_results_visible: true } : null);
                 // Results are usually for presenter but could be shown to participants too
@@ -141,21 +142,26 @@ function PlayPage() {
             });
         });
 
-        on('session_ended', () => {
+        on(SOCKET_EVENTS.SESSION_STARTED, () => {
+            setWaiting(false);
+        });
+
+        on(SOCKET_EVENTS.SESSION_ENDED, () => {
             setWaiting(true);
             setActiveQuestion(null);
             setError('Session has ended');
         });
 
         return () => {
-            off('session_joined');
-            off('question_activated');
-            off('participant_joined');
-            off('participant_left');
-            off('participant_removed');
-            off('question_locked');
-            off('results_revealed');
-            off('session_ended');
+            off(SOCKET_EVENTS.SESSION_JOINED);
+            off(SOCKET_EVENTS.QUESTION_ACTIVATED);
+            off(SOCKET_EVENTS.PARTICIPANT_JOINED);
+            off(SOCKET_EVENTS.PARTICIPANT_LEFT);
+            off(SOCKET_EVENTS.PARTICIPANT_REMOVED);
+            off(SOCKET_EVENTS.QUESTION_LOCKED);
+            off(SOCKET_EVENTS.RESULTS_REVEALED);
+            off(SOCKET_EVENTS.SESSION_STARTED);
+            off(SOCKET_EVENTS.SESSION_ENDED);
         };
     }, [sessionId, isConnected, on, off, emit, participantId, activeQuestion, code]);
 

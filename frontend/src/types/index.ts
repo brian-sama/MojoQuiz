@@ -8,7 +8,7 @@ export interface Session {
     join_code: string;
     title: string;
     mode: 'engagement' | 'quiz' | 'mixed';
-    status: 'active' | 'paused' | 'ended';
+    status: 'active' | 'live' | 'paused' | 'ended';
     currentQuestionId: string | null;
     expiresAt: string;
 }
